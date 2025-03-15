@@ -18,13 +18,15 @@ extensions = [
     'sphinx_rtd_theme',    
 ]
 
-templates_path = ['_templates']
+# No templates or static elements for now.
+# templates_path = ['_templates']
+# html_static_path = ['_static']
+
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 language = 'en'
 
 html_theme = 'sphinx_rtd_theme'
-html_static_path = ['_static']
 html_show_sourcelink = False
 
 intersphinx_mapping = {
