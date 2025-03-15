@@ -9,6 +9,10 @@ build:
   tools:
     python: "3.12"
 
+python:
+   install:
+     - requirements: doc/requirements.txt
+
 formats:
   - pdf
   - epub
