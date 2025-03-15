@@ -152,7 +152,7 @@ differently or not at all when they reload.  Here is one approach:
    construct such as an ``if`` or ``try`` statement.
 
 """
-__version__ = "0.9.0"
+__version__ = "0.9.1"
 
 import math
 import re

@@ -93,6 +93,11 @@ You can use LiveImport outside of notebooks, but in that case, you must call
 syncing in a notebook by calling `auto_sync(enabled=False)` and rely on
 explicit syncing instead.
 
+## Documentation
+
+For more details including an API reference see
+[liveimport.readthedocs.io](https://liveimport.readthedocs.io).
+
 
 ## Dependencies
 
