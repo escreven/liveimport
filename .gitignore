@@ -8,8 +8,6 @@ __pycache__/
 
 # Documentation
 _build/
-_static/
-_templates/
 
 # Distribution / packaging
 .Python
