@@ -101,4 +101,4 @@ For more details including an API reference see
 
 ## Dependencies
 
-LiveImport requires Python 3.10 or greater and IPython 7.1.1 or greater.
+LiveImport requires Python 3.10 or greater and IPython 7.16.1 or greater.
