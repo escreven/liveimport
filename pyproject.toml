@@ -31,6 +31,7 @@ classifiers = [
 Homepage = "https://github.com/escreven/liveimport"
 Repository = "https://github.com/escreven/liveimport"
 Documentation = "https://liveimport.readthedocs.io"
+Issues = "https://github.com/escreven/liveimport/issues"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

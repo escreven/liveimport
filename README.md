@@ -86,7 +86,7 @@ from printmath import print_math, print_equations as print_eq
 from simulator import *
 ```
 
-## Additional Information
+## Outside of Notebooks
 
 You can use LiveImport outside of notebooks, but in that case, you must call
 `sync()` to check for out of date imports.  You can also disable automatic
@@ -98,7 +98,25 @@ explicit syncing instead.
 For more details including an API reference see
 [liveimport.readthedocs.io](https://liveimport.readthedocs.io).
 
+## Installation
 
-## Dependencies
+You can install LiveImport from PyPI with
+
+```sh
+$ pip install liveimport
+```
+
+You can also clone the repo and install it directly.
+
+```sh
+$ git clone https://github.com/escreven/liveimport.git
+$ cd liveimport
+$ pip install .
+```
 
 LiveImport requires Python 3.10 or greater and IPython 7.16.1 or greater.
+
+## Questions or Issues
+
+If you have any questions or encounter any issues, please submit them 
+[on GitHub](https://github.com/escreven/liveimport/issues).
