@@ -6,6 +6,10 @@ import nbformat
 import os
 import re
 
+#
+# NOTE: We rely on this modules __file__ attribute to locate the test notebook,
+# and set the notebook's working directory (which must include setup.py)
+#
 
 if os.name == 'nt':
     # Python, be better.
@@ -89,11 +93,16 @@ class _Actual:
                 self.errors.append(output.ename)
 
 
-def test_notebook(filename:str="notebook.ipynb", dir=".", verbose=False):
+def test_notebook(verbose:bool=False):
     """
     Verify notebook integration.
     """
-
+    if '__file__' not in globals():
+        raise RuntimeError("Notebook integration test requires __file__")
+    
+    dir = os.path.dirname(__file__)
+    if not dir: dir = '.'
+    filename = os.path.dirname(__file__) + '/notebook.ipynb'
 
     nb = _run_notebook(filename,dir)
 
@@ -133,18 +142,9 @@ if __name__ == '__main__':
     parser = ArgumentParser(
         description="Verbosely test liveimport notebook integration")
 
-    parser.add_argument("notebook", nargs='?', default="notebook.ipynb",
-        help="Notebook file name")
-    
-    parser.add_argument("-dir",
-        help="Working directory for notebook execution")
-    
     parser.add_argument("-verbose",action="store_true",
         help="Print detailed information for every cell")
     
     args = parser.parse_args()    
 
-    filename = args.notebook
-    dir = args.dir if args.dir is not None else os.path.dirname(filename)
-
-    test_notebook(filename, dir, args.verbose)
+    test_notebook(args.verbose)
