@@ -1,0 +1,9 @@
+digraph dependency_test_modules {
+    rankdir = LR;
+    node [ shape=circle ]
+    A->C
+    B->C, D, G
+    C->E, F
+    D->F
+    E->A
+}

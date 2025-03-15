@@ -1,0 +1,6 @@
+# Store all text files with LF line endings, and do not modify on checkout
+* text eol=lf
+
+# Except make sure .sh and .bat files use CRLF on Windows
+*.sh text eol=crlf
+*.bat text eol=crlf
