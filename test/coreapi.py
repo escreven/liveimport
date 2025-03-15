@@ -3,8 +3,8 @@
 #
 
 import liveimport
-import setup
-from setup import *
+import common
+from common import *
 
 
 # globals() access means this can't be defined in setup
@@ -186,7 +186,7 @@ def test_general_reload():
     mod4 = sys.modules['mod4']
     
     # Should have changed
-    assert setup.mod2_public1 is not mod2.mod2_public1 #type:ignore
+    assert common.mod2_public1 is not mod2.mod2_public1 #type:ignore
     assert mod2_public1 is mod2.mod2_public1 #type:ignore
     assert mod2_public2_alias is mod2.mod2_public2 #type:ignore
     assert mod3_public1 is mod3.mod3_public1 #type:ignore

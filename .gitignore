@@ -6,9 +6,13 @@ __pycache__/
 # C extensions
 *.so
 
+# Documentation
+_build/
+_static/
+_templates/
+
 # Distribution / packaging
 .Python
-_build/
 build/
 develop-eggs/
 dist/

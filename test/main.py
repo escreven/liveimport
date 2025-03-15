@@ -3,12 +3,10 @@
 #
 
 from argparse import ArgumentParser
-import os
 import re
-import sys
 from types import FunctionType, ModuleType
 import liveimport
-import setup
+import common
 
 # Modules defining tests:
 import coreapi
@@ -71,9 +69,9 @@ def main():
         cases = list(reversed(cases))
         
     if args.keeptemp:
-        setup.keep_tempdir()
+        common.keep_tempdir()
 
-    env = setup.describe_environment()
+    env = common.describe_environment()
 
     if args.check_python and env['python'] != args.check_python:
         raise RuntimeError("Unexpected Python version")

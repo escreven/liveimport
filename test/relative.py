@@ -3,7 +3,7 @@
 #
 
 import liveimport
-from setup import *
+from common import *
 
 # globals() access means this can't be defined in setup
 def is_registered(modulename:str, name:str|None=None, asname:str|None=None):

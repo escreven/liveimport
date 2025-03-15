@@ -112,6 +112,20 @@ which is followed by cell
       from printmath import print_math, print_equations as print_eq
       from simulator import *
 
+Reload Reports
+--------------
+
+By default, LiveImport uses Markdown console blocks to report when it
+automatically reloads modules in a notebook, something like
+
+    .. code:: console
+
+        Reloaded symcode modified 18 seconds ago
+        Reloaded simulator because symcode reloaded
+
+You can disable these reports by calling
+`auto_sync(report=False)<auto_sync>`:func:.
+
 Additional Information
 ----------------------
 
@@ -193,7 +207,7 @@ if _IPYTHON_SHELL is not None:
     _IPYTHON_SHELL.register_magics(_LiveImportMagics)
 
 #
-# Display the given reload events as a markdown console block.
+# Display the given reload events as a Markdown console block.
 #
 
 def _display_reload_events(events):
@@ -917,7 +931,7 @@ def auto_sync(*, enabled:bool|None=None,
         will sync.  The grace period inhibits syncing between cell executions
         during a multi-cell run, such as running the entire notebook.
 
-    :param report: Use markdown console blocks to report when modules are
+    :param report: Use Markdown console blocks to report when modules are
         reloaded by automatic syncing.
     """
     if enabled is not None: _HANDLER.autosync_enabled = enabled

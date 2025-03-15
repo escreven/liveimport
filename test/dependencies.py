@@ -3,7 +3,7 @@
 #
 
 import liveimport
-from setup import *
+from common import *
 
 #
 # The tests depend on the following dependency graph created in setup.

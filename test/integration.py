@@ -7,8 +7,15 @@ import os
 import re
 
 #
-# NOTE: We rely on this modules __file__ attribute to locate the test notebook,
-# and set the notebook's working directory (which must include setup.py)
+# This module tests LiveImport's notebook integration.  It runs the cells of
+# notebook.ipynb which be in the same directory as this and the other test
+# modules, including common.py. 
+#
+# Function uses this module's __file__ attribute (which it must have) to locate
+# the test notebook, and set the notebook's working directory/
+#
+# NOTE: Someday we will use nbclient instead of nbconvert.  But for now, we
+# want to be able to test with older versions of libraries.
 #
 
 if os.name == 'nt':
@@ -134,6 +141,11 @@ def test_notebook(verbose:bool=False):
                 print()
                 raise RuntimeError("Notebook integration test failed")
 
+
+#
+# One can run this module directly, if desired.  This is mostly used to debug
+# notebook interaction.
+#
 
 if __name__ == '__main__':
     
