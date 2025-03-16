@@ -82,7 +82,15 @@ require_git_tip() {
 }
 
 #
-# Update to TestPyPI or PyPI.  Requires a user confirmation.
+# Update to TestPyPI or PyPI.  
+#
+# We only allow uploads if the repo is in sync with the tip of main.  In some
+# ways this is the wrong place to check, since the build could have been
+# performed in a branch.  But for testing, we want to allow building in a
+# branch, so we check here.
+#
+# Because uploading to [Test]PyPI cannot be undone, upload_dist requires user
+# confirmation.
 #
 
 upload_dist() {
