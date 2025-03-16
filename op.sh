@@ -99,7 +99,7 @@ upload_dist() {
         echo "Upload canceled."
         exit 1
     fi
-    # $PYTHON -m twine upload --repository "$repo" dist/*
+    $PYTHON -m twine upload --repository "$repo" dist/*
 }
 
 #
