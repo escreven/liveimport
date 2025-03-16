@@ -16,6 +16,11 @@ fail() {
     exit 1
 }
 
+#
+# Succeed iff all version markers in project are identical (currently in
+# pyproject.toml and liveimport.py.)
+#
+
 require_consistent_version() {
 
     pyproject_version=$(\
@@ -37,15 +42,29 @@ require_consistent_version() {
     echo $python_version
 }
 
+#
+# Succeed iff there is exactly built version, which we determine by counting
+# wheel files in dist/.
+#
+
 require_one_built_version() {
     [ -d dist ] || fail "Distribution directory dist/ does not exist"
     count=$(ls dist/*.whl 2>/dev/null | wc -l)
 	[ $count -eq 1 ] || fail "Expected one built version; found" $count
 }
 
+#
+# Succeed iff twine check succeeds for the built distribution files.
+#
+
 require_good_build() {
     $PYTHON -m twine check dist/* || fail "Twine check failed"
 }
+
+#
+# Succeed iff the local repo is on branch main, is up to date with the remote,
+# and has no unstaged or uncommitted changes, and is not ahead of remote.
+#
 
 require_git_tip() {
 
@@ -61,6 +80,10 @@ require_git_tip() {
 
     git diff --cached --quiet || fail "There are uncommitted changes"
 }
+
+#
+# Update to TestPyPI or PyPI.  Requires a user confirmation.
+#
 
 upload_dist() {
     require_one_built_version
@@ -78,6 +101,10 @@ upload_dist() {
     fi
     # $PYTHON -m twine upload --repository "$repo" dist/*
 }
+
+#
+# Print usage and exit.
+#
 
 usage() {
     echo "Usage: $0 ACTION"
@@ -98,6 +125,10 @@ usage() {
     echo
     exit 1
 }
+
+#
+# Dispatch
+#
 
 action="$1"
 
