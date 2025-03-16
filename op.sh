@@ -62,8 +62,8 @@ require_good_build() {
 }
 
 #
-# Succeed iff the local repo is on branch main, is up to date with the remote,
-# and has no unstaged or uncommitted changes, and is not ahead of remote.
+# Succeed iff the local repo is on branch main, is synced with remote (neither
+# ahead nor behind), and has no unstaged or uncommitted changes.
 #
 
 require_git_tip() {
@@ -74,7 +74,7 @@ require_git_tip() {
 
     git fetch origin
     local_status=$(git status -uno | grep "Your branch is up to date")
-    [ -n "$local_status" ] || fail "Local is not up to date with remote"
+    [ -n "$local_status" ] || fail "Local is not synced with remote"
 
     git diff --quiet || fail "There are unstaged changes"
 
