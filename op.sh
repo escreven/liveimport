@@ -82,6 +82,24 @@ require_git_tip() {
 }
 
 #
+# Build the wheel and sdist files.  build_dist removes the left-over egg-info
+# directory.  Hopefully build will stop leaving behind one day.
+#
+
+build_dist() {
+
+    version=$(require_consistent_version)
+
+    echo "Building version $version"
+    $PYTHON -m build
+
+    if [ -d src/liveimport.egg-info ]; then
+        echo "Deleting egg-info"
+        /bin/rm -r -f src/liveimport.egg-info
+    fi
+}
+
+#
 # Update to TestPyPI or PyPI.  
 #
 # We only allow uploads if the repo is in sync with the tip of main.  In some
@@ -145,9 +163,7 @@ case "$action" in
         make -C doc html
         ;;
     build-dist)
-        version=$(require_consistent_version)
-        echo "Building version $version"
-        $PYTHON -m build
+        build_dist
         ;;
     check-dist)
         require_one_built_version
