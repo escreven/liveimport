@@ -32,5 +32,5 @@ differently or not at all when they reload.  Here is one approach:
             print("First load of module")
     
 The code above should be at the top level of your module.  Because
-``did_initial_load`` is undefined on the first load, the exception handling
+``_did_initial_load`` is undefined on the first load, the exception handling
 code runs.  On reloads, the ``try`` primary path runs normally.
