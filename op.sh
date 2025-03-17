@@ -56,6 +56,9 @@ require_one_built_version() {
 #
 # Succeed iff twine check succeeds for the built distribution files.
 #
+# NOTE: There is currently a bug in twine or setuptools that causes this to
+# spuriously fail on Mac with an error message related to license_file.
+#
 
 require_good_build() {
     $PYTHON -m twine check dist/* || fail "Twine check failed"

@@ -10,4 +10,6 @@ LiveImport
     :caption: Contents:
 
     api
-
+    installation
+    issues
+    tips

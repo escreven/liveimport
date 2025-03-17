@@ -43,41 +43,20 @@ Modules referenced by registered import statements are called tracked modules.
 The process of bringing registered imports up to date by reloading tracked
 modules and updating symbols is called syncing.
 
-LiveImport analyzes top-level import [#f1]_ dependencies between tracked
-modules to ensure reloading is consistent with those dependencies.  Suppose
-``simulator`` imports ``symcode``.  Then, if you modify ``symcode.py``,
-LiveImport reloads ``simulator`` after it reloads ``symcode`` even if
-``simulator.py`` has not changed.  If you do modify both, LiveImport takes care
-to reload ``symcode`` first.
-
-Recommended Practice
---------------------
-
-While LiveImport does not require executed and registered import statements to
-be identical, the results of reloading may be surprising if they are not.
-
-The ``clear=True`` option shown in the example above causes `register()`:func:
-to discard all prior import registrations targeting the given namespace.  So,
-if you wanted to stop tracking modifications to ``symcode.py``, you could
-simply delete ``import symcode`` from the `register()`:func: `importstmts`
-argument and rerun the cell.
-
-Considering the previous two paragraphs, the recommended practice is to place
-all imports for modules to be tracked together in an initial cell followed
-immediately by a `register()`:func: call with ``clear=True`` and the same
-import statement text written as a multiline string.  That way maintaining
-identical executed and registered import statements is simple, and rerunning
-the notebook makes registrations consistent with what appears in the notebook.
-The example follows this form.
+The ``clear=True`` option used above causes `register()`:func: to discard all
+prior import registrations targeting the given namespace.  So, if you wanted to
+stop tracking modifications to ``symcode.py``, you could simply delete ``import
+symcode`` from the `register()`:func: `importstmts` argument and rerun the
+cell.
 
 Cell Magic
 ----------
 
-As an alternative, LiveImport defines a cell magic ``%%liveimport`` which both
-executes the cell content and registers every top-level import statement.
-Option ``--clear`` of ``%%liveimport`` has the same effect as ``clear=True``
-with `register()`:func:.  So, you could split the example cell above into two,
-making the second
+As an alternative to `register()`:func:, LiveImport defines a cell magic
+``%%liveimport`` which both executes the cell content and registers every
+top-level [#f1]_ import statement.  Option ``--clear`` of ``%%liveimport`` has
+the same effect as ``clear=True`` with `register()`:func:.  So, you could split
+the example cell above into two, making the second
 
   .. code:: python
 
@@ -112,6 +91,16 @@ which is followed by cell
       from printmath import print_math, print_equations as print_eq
       from simulator import *
 
+Dependency Analysis
+-------------------
+
+LiveImport analyzes top-level import dependencies between tracked
+modules to ensure reloading is consistent with those dependencies.  Suppose
+``simulator`` imports ``symcode``.  Then, if you modify ``symcode.py``,
+LiveImport reloads ``simulator`` after it reloads ``symcode`` even if
+``simulator.py`` has not changed.  If you do modify both, LiveImport takes care
+to reload ``symcode`` first.
+
 Reload Reports
 --------------
 
@@ -126,8 +115,8 @@ automatically reloads modules in a notebook, something like
 You can disable these reports by calling
 `auto_sync(report=False)<auto_sync>`:func:.
 
-Additional Information
-----------------------
+Outside of Notebooks
+--------------------
 
 You can use LiveImport outside of notebook environments, but in that case,
 there is no automatic syncing, so you must call `sync()`:func: explicitly.  You
@@ -135,24 +124,11 @@ can also disable automatic syncing in a notebook by calling
 `auto_sync(enabled=False) <auto_sync>`:func: and rely on explicit syncing
 instead.
 
-Modules sometimes take action when they load that should be performed
-differently or not at all when they reload.  Here is one approach:
-
-  .. code:: python
-
-      try:
-          _did_initial_load    #type:ignore
-          print("Reloading module")
-      except NameError:
-          _did_initial_load = True
-          print("First load of module")
-
 .. [#f1] A "top-level import" is any ``import ...`` or ``from ... import ...``
    statement in Python source that is not nested within another Python
    construct such as an ``if`` or ``try`` statement.
-
 """
-__version__ = "0.9.1"
+__version__ = "0.9.2dev1"
 
 import math
 import re
