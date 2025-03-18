@@ -4,42 +4,73 @@
 # op.sh - A build and deployment script for LiveImport
 #
 
-set -e
+set -euo pipefail
 
-PYTHON=python3
-if uname -s | grep -q CYGWIN; then
+if [[ $(uname -s) == CYGWIN* ]]; then
     PYTHON=py
+else
+    PYTHON=python3
 fi
 
-fail() {
+
+#
+# Report fatal error to stderr and exit.
+#
+
+function fail {
     echo "FAILED: $@" >&2
     exit 1
 }
 
 #
 # Succeed iff all version markers in project are identical (currently in
-# pyproject.toml and liveimport.py.)
+# pyproject.toml and liveimport.py.)  Output is the consistent version.
 #
 
-require_consistent_version() {
+function require_consistent_version {
 
+    local pyproject_version
     pyproject_version=$(\
         sed -n 's/^version = "\([^"][^"]*\)"/\1/p' pyproject.toml)
 
-    [ -z "$pyproject_version" ] \
+    [[ -z $pyproject_version ]] \
         && fail "Could not find version in pyproject.toml"
 
+    local python_version
     python_version=$(\
         sed -n 's/^__version__ = "\([^"][^"]*\)"/\1/p' src/liveimport.py)
 
-    [ -z "$python_version" ] \
+    [[ -z $python_version ]] \
         && fail "Could not find version in liveimport.py"
         
-    [ "$pyproject_version" = "$python_version" ] \
+    [[ $pyproject_version == "$python_version" ]] \
         || fail "Version mismatch: pyproject.toml ($pyproject_version)" \
-                " != src/liveimport.py ($python_version)"
+                "!= src/liveimport.py ($python_version)"
 
     echo $python_version
+}
+
+#
+# Succeed iff there is no release tag for version.
+#
+
+function require_not_released {
+    local version=$1
+
+    if git tag -l | grep -q "v${version}"; then
+        fail "Source version $version already released"
+    fi
+}
+
+#
+# Make sure the current version has a <major>.<minor>.<patch> form.
+#
+
+function require_releasable_version {
+    local version=$1
+    [[ $version =~ \d+.\d+.\d+ ]] \
+        || fail "Release versions must be <major>.<minor>.<patch>;" \
+                "have version $version"
 }
 
 #
@@ -47,10 +78,14 @@ require_consistent_version() {
 # wheel files in dist/.
 #
 
-require_one_built_version() {
-    [ -d dist ] || fail "Distribution directory dist/ does not exist"
+function require_one_built_version {
+
+    [[ -d dist ]] || fail "Distribution directory dist/ does not exist"
+
+    local count
     count=$(ls dist/*.whl 2>/dev/null | wc -l)
-	[ $count -eq 1 ] || fail "Expected one built version; found" $count
+
+	[[ $count -eq 1 ]] || fail "Expected one built version; found" "$count"
 }
 
 #
@@ -60,7 +95,7 @@ require_one_built_version() {
 # spuriously fail on Mac with an error message related to license_file.
 #
 
-require_good_build() {
+function require_good_build {
     $PYTHON -m twine check dist/* || fail "Twine check failed"
 }
 
@@ -69,15 +104,18 @@ require_good_build() {
 # ahead nor behind), and has no unstaged or uncommitted changes.
 #
 
-require_git_tip() {
+function require_git_tip {
 
+    local current_branch
     current_branch=$(git rev-parse --abbrev-ref HEAD)
-    [ "$current_branch" = "main" ] \
+
+    [[ $current_branch == main ]] \
         || fail "On branch $current_branch, not main"
 
     git fetch origin
-    local_status=$(git status -uno | grep "Your branch is up to date")
-    [ -n "$local_status" ] || fail "Local is not synced with remote"
+
+    (git status -uno | grep -q "Your branch is up to date") \
+        || fail "Local is not synced with remote"
 
     git diff --quiet || fail "There are unstaged changes"
 
@@ -89,14 +127,17 @@ require_git_tip() {
 # directory.  Hopefully build will stop leaving behind one day.
 #
 
-build_dist() {
+function build_dist {
 
+    local version 
     version=$(require_consistent_version)
+
+    require_not_released "$version"
 
     echo "Building version $version"
     $PYTHON -m build
 
-    if [ -d src/liveimport.egg-info ]; then
+    if [[ -d src/liveimport.egg-info ]]; then
         echo "Deleting egg-info"
         /bin/rm -r -f src/liveimport.egg-info
     fi
@@ -115,16 +156,21 @@ build_dist() {
 #
 
 upload_dist() {
+
+    local version
+    version=$(require_consistent_version)
+    require_releasable_version "$version"
     require_one_built_version
     require_good_build
     require_git_tip
-    name="$1"
-    repo="$2"
+    local name=$1
+    local repo=$2
+    local confirm
     echo
     echo ">>>> Uploading to $name cannot be undone."
     read -p ">>>> Type $name to confirm: " confirm
     echo
-    if [ "$confirm" != "$name" ]; then
+    if [[ $confirm != "$name" ]]; then
         echo "Upload canceled."
         exit 1
     fi
@@ -155,13 +201,29 @@ usage() {
     exit 1
 }
 
+
+#
+# This script should be at the root of the project directory -- go there.  The
+# project must have a prproject.toml file, and the project name must be
+# liveimport.
+#
+
+cd "$(dirname "$BASH_SOURCE")"
+
+[[ -f pyproject.toml ]] || fail "No pyproject.toml"
+
+grep -qE 'name\s*=\s*"liveimport"' pyproject.toml \
+    || fail "Project name is not liveimport."
+
 #
 # Dispatch
 #
 
-action="$1"
+if [[ $# -lt 1 ]]; then
+    usage
+fi
 
-case "$action" in
+case "$1" in
     build-doc)
         make -C doc html
         ;;
@@ -188,7 +250,7 @@ case "$action" in
         rm -rf dist/*
         ;;
     clean)
-        make -C doc clean
+        make -C doc clean >/dev/null
         rm -rf dist/*
         ;;
     *)
