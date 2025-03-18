@@ -23,7 +23,19 @@ function fail {
 }
 
 #
-# Succeed iff all version markers in project are identical (currently in
+# Wheel and sdist filenames given a version.
+#
+
+function wheel_file {
+    echo "dist/liveimport-$1-py3-none-any.whl"
+}
+
+function sdist_file {
+    echo "dist/liveimport-$1.tar.gz"
+}
+
+#
+# Succeed iff all version markers in the project are identical (currently in
 # pyproject.toml and liveimport.py.)  Output is the consistent version.
 #
 
@@ -47,7 +59,7 @@ function require_consistent_version {
         || fail "Version mismatch: pyproject.toml ($pyproject_version)" \
                 "!= src/liveimport.py ($python_version)"
 
-    echo $python_version
+    echo "$python_version"
 }
 
 #
@@ -56,14 +68,23 @@ function require_consistent_version {
 
 function require_not_released {
     local version=$1
-
     if git tag -l | grep -q "v${version}"; then
         fail "Source version $version already released"
     fi
 }
 
 #
-# Make sure the current version has a <major>.<minor>.<patch> form.
+# Succeed iff there is a release tag for version.
+#
+
+function require_released {
+    local version=$1
+    git tag -l | grep -q "v${version}" \
+        || fail "Source version $version not released"
+}
+
+#
+# Succeed iff the given version has a <major>.<minor>.<patch> form.
 #
 
 function require_releasable_version {
@@ -74,65 +95,74 @@ function require_releasable_version {
 }
 
 #
-# Succeed iff there is exactly built version, which we determine by counting
-# wheel files in dist/.
-#
-
-function require_one_built_version {
-
-    [[ -d dist ]] || fail "Distribution directory dist/ does not exist"
-
-    local count
-    count=$(ls dist/*.whl 2>/dev/null | wc -l)
-
-	[[ $count -eq 1 ]] || fail "Expected one built version; found" "$count"
-}
-
-#
-# Succeed iff twine check succeeds for the built distribution files.
+# Succeed iff the given version and not other is built, and twine check
+# succeeds for that build.
 #
 # NOTE: There is currently a bug in twine or setuptools that causes this to
 # spuriously fail on Mac with an error message related to license_file.
 #
 
 function require_good_build {
-    $PYTHON -m twine check dist/* || fail "Twine check failed"
+    local version=$1
+
+    [[ -d dist ]] || fail "Distribution directory dist/ does not exist"  
+
+    local count
+    count=$(ls dist/*.whl 2>/dev/null | wc -l)
+
+	[[ $count -eq 1 ]] || fail "Expected one built version; found" "$count"
+
+    [[ -f $(wheel_file $version) && -f $(sdist_file $version) ]] \
+        || fail "Version $version not built"
+        
+    local version=$1
+    $PYTHON -m twine check \
+            "$(wheel_file "$version")" \
+            "$(sdist_file "$version")" \
+        || fail "Twine check failed"
 }
 
 #
-# Succeed iff the local repo is on branch main, is synced with remote (neither
-# ahead nor behind), and has no unstaged or uncommitted changes.
+#  Succeed iff the local repo is on branch main with a clean tree synchronized
+#  with the given branch or tag (which should be either remotes/origin/main or
+#  the release tag).
 #
 
-function require_git_tip {
+function require_git_clean {
+    local branch_or_tag=$1
 
     local current_branch
-    current_branch=$(git rev-parse --abbrev-ref HEAD)
+    current_branch="$(git rev-parse --abbrev-ref HEAD)"
 
     [[ $current_branch == main ]] \
         || fail "On branch $current_branch, not main"
-
-    git fetch origin
-
-    (git status -uno | grep -q "Your branch is up to date") \
-        || fail "Local is not synced with remote"
-
+    
     git diff --quiet || fail "There are unstaged changes"
 
     git diff --cached --quiet || fail "There are uncommitted changes"
+
+    [[ -z "$(git ls-files --others --exclude-standard)" ]] \
+        || fail "There are untracked files"
+
+    [[ $(git rev-parse HEAD) == "$(git rev-parse "$branch_or_tag")" ]] \
+        || fail "Local repo not synced with $branch_or_tag"
 }
 
 #
-# Build the wheel and sdist files.  build_dist removes the left-over egg-info
-# directory.  Hopefully build will stop leaving behind one day.
+# Build the wheel and sdist files.  The current project version must be
+# different than any released version.  build_dist removes the left-over
+# egg-info directory.  Hopefully build will stop leaving behind one day.
 #
 
 function build_dist {
 
+    [[ -d dist ]] || fail "Distribution directory dist/ does not exist"  
+
     local version 
     version=$(require_consistent_version)
-
     require_not_released "$version"
+
+    /bin/rm -f dist/*.whl dist/*.tar.gz
 
     echo "Building version $version"
     $PYTHON -m build
@@ -144,29 +174,74 @@ function build_dist {
 }
 
 #
-# Update to TestPyPI or PyPI.  
+# Build the wheel and sdist files.  The current project version must be
+# different than any released version.  build_dist removes the left-over
+# egg-info directory.  Hopefully build will stop leaving behind one day.
 #
-# We only allow uploads if the repo is in sync with the tip of main.  In some
-# ways this is the wrong place to check, since the build could have been
-# performed in a branch.  But for testing, we want to allow building in a
-# branch, so we check here.
+
+function check_dist {
+
+    local version 
+    version=$(require_consistent_version)
+    require_good_build $version
+}
+
 #
-# Because uploading to [Test]PyPI cannot be undone, upload_dist requires user
-# confirmation.
+# Create and push a release tag.  The user is prompted for the release version.
+# The response must match the version number embedded in the project, cannot
+# have already been released, and must be the built version.  Also, the local
+# repository must have a clean tree on branch main in sync with remote.
+#
+
+function declare_release {
+
+    local version
+    echo
+    echo ">>>> About to declare a release."
+    read -p ">>>> Enter release version number: " version
+    echo
+
+    local found_version
+    found_version=$(require_consistent_version)
+
+    [[ $version == "$version_confirm" ]] \
+        || fail "Entered version $version_confirm " \
+                "does not match project version $version"
+
+    require_releasable_version "$version"
+    require_not_released "$version"
+    require_good_build "$version"
+    require_git_clean remotes/origin/main
+
+    tag="v$version"
+    git tag -a "$tag" -m "Release $version"
+    git push origin "$tag"
+}
+
+#
+# Upload to TestPyPI or PyPI.  
+#
+# The project version have a good build and must be released.  The local repo
+# must be a clear tree synchronized with the release tag.  Because uploading to
+# [Test]PyPI cannot be undone, the user mus confirm the operation.
 #
 
 upload_dist() {
 
-    local version
-    version=$(require_consistent_version)
-    require_releasable_version "$version"
-    require_one_built_version
-    require_good_build
-    require_git_tip
     local name=$1
     local repo=$2
+
+    local version
+    version=$(require_consistent_version)
+
+    require_releasable_version "$version"
+    require_good_build "$version"
+    require_released "$version"
+    require_git_clean "v$version"    
+
     local confirm
     echo
+    echo ">>>> About to upload release $version to $name."
     echo ">>>> Uploading to $name cannot be undone."
     read -p ">>>> Type $name to confirm: " confirm
     echo
@@ -174,6 +249,7 @@ upload_dist() {
         echo "Upload canceled."
         exit 1
     fi
+
     $PYTHON -m twine upload --repository "$repo" dist/*
 }
 
@@ -189,7 +265,7 @@ usage() {
     echo "    build-doc           Build the documentation"
     echo "    build-dist          Build wheel and sdist files in dist/"
     echo "    check-dist          Verify the distribution files"
-    echo "    check-tip           Verify local repo is at tip"
+    echo "    check-clean-main    Verify local repo is on clean main branch"
     echo "    deploy-to-testpypi  Upload distribution files to TestPyPI"
     echo "    deploy-to-pypi      Upload distribution files to PyPI"
     echo "    clean-doc           Delete documentation"
@@ -201,7 +277,8 @@ usage() {
     exit 1
 }
 
-
+#
+# ================================ MAIN ======================================
 #
 # This script should be at the root of the project directory -- go there.  The
 # project must have a prproject.toml file, and the project name must be
@@ -214,6 +291,14 @@ cd "$(dirname "$BASH_SOURCE")"
 
 grep -qE 'name\s*=\s*"liveimport"' pyproject.toml \
     || fail "Project name is not liveimport."
+
+
+#
+# Several operations depend on git state.  Bring it up to date.
+#
+
+git fetch --all --prune --tags \
+    || fail "Could not fetch state from git."
 
 #
 # Dispatch
@@ -231,11 +316,10 @@ case "$1" in
         build_dist
         ;;
     check-dist)
-        require_one_built_version
-        require_good_build
+        check_dist
         ;;
-    check-tip)
-        require_git_tip
+    check-clean-main)
+        require_git_clean remotes/origin/main
         ;;
     deploy-to-testpypi)
         upload_dist TestPyPI testpypi
