@@ -1,10 +1,19 @@
 from argparse import ArgumentParser
+import time
 from nbconvert.preprocessors import ExecutePreprocessor
 from nbformat import NotebookNode
 from traitlets.config import Config
 import nbformat
 import os
 import re
+
+#
+# TODO: Inject "AUTOMATIC_TEST = True" in first code cell.
+# TODO: Modify notebook.ipynb to bytepass tests that can't work manually.
+# TODO: Find and fix reload report bug
+# TODO: Verify all declarations work
+# TODO: Consider restructuring so all test activity happens preprocess_cell.
+#
 
 #
 # This module tests LiveImport's notebook integration.  It runs the cells of
@@ -24,6 +33,28 @@ if os.name == 'nt':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
+_PRESLEEP_DECL_RE  = re.compile(r"#@\s*presleep\s+([0-9.]+)\s*")
+_RELOAD_DECL_RE    = re.compile(r"#@\s*reload\s+(\w+)\s*")
+_ERROR_DECL_RE     = re.compile(r"#@\s*error\s+(\w+)\s*")
+_MISSINGOK_DECL_RE = re.compile(r"#@\s*missingok\s*")
+
+
+class SleepableExecutePreprocessor(ExecutePreprocessor):
+    def preprocess_cell(self, cell:NotebookNode, resources, index):
+        if cell.cell_type == 'code':
+            sleep = 0.0
+            for line in cell.source.split('\n'):
+                if (match := _PRESLEEP_DECL_RE.fullmatch(line)):
+                    try:
+                        sleep = max(sleep,float(match[1]))
+                    except ValueError:
+                        raise RuntimeError(
+                            "Bad presleep declaration: " + line)
+            if sleep > 0:
+                time.sleep(sleep)
+        return super().preprocess_cell(cell,resources,index)
+
+
 def _clear_output(nb:NotebookNode):
     for cell in nb.cells:
         if hasattr(cell,'outputs'):
@@ -35,7 +66,8 @@ def _run_notebook(filename:str, dir:str):
     config.InteractiveShell.colors = 'NoColor'
     nb = nbformat.read(filename,as_version=4)
     _clear_output(nb)
-    ExecutePreprocessor(kernel_name="python3", config=config).preprocess(
+    SleepableExecutePreprocessor(kernel_name="python3", 
+                                 config=config).preprocess(
         nb, resources={ "metadata": { "path": dir } })
     return nb
 
@@ -44,11 +76,6 @@ def _indent(s:str):
     # textwrap.indent() doesn't handle blank lines the way we want.
     lines = s.rstrip().split('\n')
     return '\n'.join("    " + line for line in lines)
-
-
-_RELOAD_DECL_RE    = re.compile(r"#@\s*reload\s+(\w+)\s*")
-_ERROR_DECL_RE     = re.compile(r"#@\s*error\s+(\w+)\s*")
-_MISSINGOK_DECL_RE = re.compile(r"#@\s*missingok\s*")
 
 
 class _Expect:
@@ -69,9 +96,12 @@ class _Expect:
                     self.errors.append(match[1])
                 elif (match := _MISSINGOK_DECL_RE.fullmatch(line)):
                     self.ok = False
+                elif _PRESLEEP_DECL_RE.fullmatch(line):
+                    # Already processed
+                    pass
                 else:
                     raise ValueError(
-                        "Bad tag line in notebook code cell: " + line)
+                        "Bad declaration in notebook code cell: " + line)
                 
 
 _RELOADED_LINE_RE = re.compile(r"^Reloaded (\w+) ")
@@ -114,7 +144,7 @@ def test_notebook(verbose:bool=False):
     nb = _run_notebook(filename,dir)
 
     for i, cell in enumerate(nb.cells):
-        if hasattr(cell,"outputs"):
+        if cell.cell_type == 'code':
             expect = _Expect(cell.source)
             actual = _Actual(cell)
             good = (expect.reloads == actual.reloads and 

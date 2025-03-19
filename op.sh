@@ -12,7 +12,6 @@ else
     PYTHON=python3
 fi
 
-
 #
 # Report fatal error to stderr and exit.
 #
@@ -89,7 +88,7 @@ function require_released {
 
 function require_releasable_version {
     local version=$1
-    [[ $version =~ \d+.\d+.\d+ ]] \
+    [[ $version =~ [0-9]+.[0-9]+.[0-9]+ ]] \
         || fail "Release versions must be <major>.<minor>.<patch>;" \
                 "have version $version"
 }
@@ -174,9 +173,7 @@ function build_dist {
 }
 
 #
-# Build the wheel and sdist files.  The current project version must be
-# different than any released version.  build_dist removes the left-over
-# egg-info directory.  Hopefully build will stop leaving behind one day.
+# Check the wheel and sdist files.  
 #
 
 function check_dist {
@@ -204,9 +201,9 @@ function declare_release {
     local found_version
     found_version=$(require_consistent_version)
 
-    [[ $version == "$version_confirm" ]] \
-        || fail "Entered version $version_confirm " \
-                "does not match project version $version"
+    [[ $version == "$found_version" ]] \
+        || fail "Entered version $version " \
+                "does not match project version $found_version"
 
     require_releasable_version "$version"
     require_not_released "$version"
@@ -221,9 +218,10 @@ function declare_release {
 #
 # Upload to TestPyPI or PyPI.  
 #
-# The project version have a good build and must be released.  The local repo
-# must be a clear tree synchronized with the release tag.  Because uploading to
-# [Test]PyPI cannot be undone, the user mus confirm the operation.
+# The project version must have a good build and must be released.  The local
+# repo must be a clean tree synchronized with the release tag.  Because
+# uploading to [Test]PyPI cannot be undone, the user must confirm the
+# operation.
 #
 
 upload_dist() {
@@ -266,6 +264,7 @@ usage() {
     echo "    build-dist          Build wheel and sdist files in dist/"
     echo "    check-dist          Verify the distribution files"
     echo "    check-clean-main    Verify local repo is on clean main branch"
+    echo "    declare-release     Tag current clean main branch as a release"
     echo "    deploy-to-testpypi  Upload distribution files to TestPyPI"
     echo "    deploy-to-pypi      Upload distribution files to PyPI"
     echo "    clean-doc           Delete documentation"
@@ -320,6 +319,9 @@ case "$1" in
         ;;
     check-clean-main)
         require_git_clean remotes/origin/main
+        ;;
+    declare-release)
+        declare_release
         ;;
     deploy-to-testpypi)
         upload_dist TestPyPI testpypi

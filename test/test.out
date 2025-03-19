@@ -1,0 +1,1073 @@
+SLEEPING FOR 0.5
+
+--------------CELL 1--------------
+
+Source:
+
+    import liveimport
+    from IPython.display import Markdown
+    
+    from common import *
+    
+    describe_environment()
+    
+    # globals() access means this can't be defined in setup
+    def is_registered(modulename:str, name:str|None=None, asname:str|None=None):
+        return liveimport._is_registered(globals(),modulename,name,asname)
+    
+    def ok():
+        display(Markdown("OK"))
+    
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 4--------------
+
+Source:
+
+    #
+    # Register using the three different import statement forms.
+    #
+    # [See coreapi.test_three_forms().]
+    #
+    
+    liveimport.register(globals(),"""
+    import mod1
+    from mod2 import mod2_public1, mod2_public2 as mod2_public2_alias
+    from mod3 import *
+    from mod4 import *
+    """, clear=True)
+    
+    assert is_registered('mod1')
+    assert is_registered('mod2','mod2_public1')
+    assert is_registered('mod2','mod2_public2','mod2_public2_alias')
+    assert is_registered('mod3','*')
+    assert is_registered('mod4','*')
+    assert not is_registered('mod1','*')
+    assert not is_registered('mod1','mod1_public1')
+    assert not is_registered('mod2','*')
+    assert not is_registered('mod2','mod2_public2')
+    assert not is_registered('mod2','mod2_public3')
+    assert not is_registered('mod3','mod3_public1')
+    assert not is_registered('mod4','mod4_public1')
+    
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 5--------------
+
+Source:
+
+    #
+    # Prepare for next cell
+    #
+    
+    mod1_tag = get_tag("mod1")
+    mod2_tag = get_tag("mod2")
+    mod3_tag = get_tag("mod3")
+    mod4_tag = get_tag("mod4")
+    
+    touch_module("mod1")
+    touch_module("mod2")
+    touch_module("mod3")
+    touch_module("mod4")
+    
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 6--------------
+
+Source:
+
+    #
+    # Updated modules should NOT trigger auto sync because the grace period
+    # has not expired.
+    #
+    
+    expect_tag("mod1",mod1_tag)
+    expect_tag("mod2",mod2_tag)
+    expect_tag("mod3",mod3_tag)
+    expect_tag("mod4",mod4_tag)
+    
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 8--------------
+
+Source:
+
+    #
+    # Prepare for the next cell.  
+    #
+    
+    liveimport.auto_sync(grace=0.0)
+    
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 9--------------
+
+Source:
+
+    #
+    # All registered modules should have automatically reloaded.
+    #
+    
+    expect_tag("mod1",next_tag(mod1_tag))
+    expect_tag("mod2", next_tag(mod2_tag))
+    expect_tag("mod3",next_tag(mod3_tag))
+    expect_tag("mod4",next_tag(mod4_tag))
+    
+    ok()
+    
+    #@ reload mod1
+    #@ reload mod2
+    #@ reload mod3
+    #@ reload mod4
+
+Expected:
+    reloads=['mod1', 'mod2', 'mod3', 'mod4']
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=['mod1', 'mod2', 'mod3', 'mod4']
+     errors=[]
+         ok=True
+
+--------------CELL 10--------------
+
+Source:
+
+    #
+    # Prepare for next cell
+    #
+    
+    mod1_tag = get_tag("mod1")
+    mod2_tag = get_tag("mod2")
+    mod3_tag = get_tag("mod3")
+    mod4_tag = get_tag("mod4")
+    
+    touch_module("mod2")
+    
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 11--------------
+
+Source:
+
+    #
+    # Only mod2 should have reloaded.
+    #
+    
+    expect_tag("mod1",mod1_tag)
+    expect_tag("mod2",next_tag(mod2_tag))
+    expect_tag("mod3",mod3_tag)
+    expect_tag("mod4",mod4_tag)
+    ok()
+    
+    #@ reload mod2
+
+Expected:
+    reloads=['mod2']
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=['mod2']
+     errors=[]
+         ok=True
+
+--------------CELL 13--------------
+
+Source:
+
+    #
+    # Make a registered module syntactically invalid.
+    #
+    
+    assert is_registered("mod1")
+    
+    modify_module("mod1",postscript="not valid python")
+    
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 14--------------
+
+Source:
+
+    #
+    # There should be a syntax error here when liveimport attempts to automatically
+    # sync the module.
+    #
+    
+    ok()
+    
+    #@ error SyntaxError
+
+Expected:
+    reloads=[]
+     errors=['SyntaxError']
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=['SyntaxError']
+         ok=True
+
+--------------CELL 15--------------
+
+Source:
+
+    #
+    # There should again be a syntax error here because it hasn't been fixed yet.
+    # We do fix it now.
+    #
+    
+    restore_module("mod1")
+    ok()
+    
+    #@ error SyntaxError
+
+Expected:
+    reloads=[]
+     errors=['SyntaxError']
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=['SyntaxError']
+         ok=True
+
+--------------CELL 16--------------
+
+Source:
+
+    #
+    # Module mod1 should have automatically synced without an error.  However, we
+    # update it to raise a RuntimeError exception.
+    #
+    
+    modify_module("mod1",postscript="raise RuntimeError('as expected')")
+    
+    ok()
+    
+    #@ reload mod1
+
+Expected:
+    reloads=['mod1']
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=['mod1']
+     errors=[]
+         ok=True
+
+--------------CELL 17--------------
+
+Source:
+
+    #
+    # There should be a runtime error here when liveimport attempts to
+    # automatically sync the module.
+    #
+    
+    ok()
+    
+    #@ error RuntimeError
+
+Expected:
+    reloads=[]
+     errors=['RuntimeError']
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=['RuntimeError']
+         ok=True
+
+--------------CELL 18--------------
+
+Source:
+
+    #
+    # There should again be a runtime error here because it hasn't been fixed yet.
+    # We do fix it now.
+    #
+    
+    restore_module("mod1")
+    
+    ok()
+    
+    #@ error RuntimeError
+
+Expected:
+    reloads=[]
+     errors=['RuntimeError']
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=['RuntimeError']
+         ok=True
+
+--------------CELL 19--------------
+
+Source:
+
+    #
+    # Module unreliable should automatically synced without an error.  
+    #
+    
+    ok()
+    
+    #@ reload mod1
+
+Expected:
+    reloads=['mod1']
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=['mod1']
+     errors=[]
+         ok=True
+
+--------------CELL 22--------------
+
+Source:
+
+    #
+    # Reset, except leave grace at zero.
+    #
+    
+    liveimport.register(globals(),"",clear=True)
+    liveimport.auto_sync(enabled=True,grace=0.0)
+    liveimport.hidden_cell_magic(enabled=False)
+    body_ran = False
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 23--------------
+
+Source:
+
+    %%liveimport
+    import mod1
+    from mod2 import mod2_public1, mod2_public2 as mod2_public2_alias
+    from mod3 import *
+    from mod4 import *
+    body_ran = True
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 24--------------
+
+Source:
+
+    #
+    # Verify registrations above, and also that the code executed.
+    #
+    
+    assert is_registered('mod1')
+    assert is_registered('mod2','mod2_public1')
+    assert is_registered('mod2','mod2_public2','mod2_public2_alias')
+    assert is_registered('mod3','*')
+    assert is_registered('mod4','*')
+    assert not is_registered('mod1','*')
+    assert not is_registered('mod1','mod1_public1')
+    assert not is_registered('mod2','*')
+    assert not is_registered('mod2','mod2_public2')
+    assert not is_registered('mod2','mod2_public3')
+    assert not is_registered('mod3','mod3_public1')
+    assert not is_registered('mod4','mod4_public1')
+    assert body_ran
+    
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 25--------------
+
+Source:
+
+    #
+    # Prepare for next cell
+    #
+    
+    mod1_tag = get_tag("mod1")
+    mod2_tag = get_tag("mod2")
+    mod3_tag = get_tag("mod3")
+    mod4_tag = get_tag("mod4")
+    
+    touch_module("mod1")
+    touch_module("mod2")
+    touch_module("mod3")
+    touch_module("mod4")
+    
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 26--------------
+
+Source:
+
+    #
+    # All registered modules should have automatically reloaded.
+    #
+    
+    expect_tag("mod1",next_tag(mod1_tag))
+    expect_tag("mod2",next_tag(mod2_tag))
+    expect_tag("mod3",next_tag(mod3_tag))
+    expect_tag("mod4",next_tag(mod4_tag))
+    
+    ok()
+    
+    #@ reload mod1
+    #@ reload mod2
+    #@ reload mod3
+    #@ reload mod4
+
+Expected:
+    reloads=['mod1', 'mod2', 'mod3', 'mod4']
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=['mod1', 'mod2', 'mod3', 'mod4']
+     errors=[]
+         ok=True
+
+--------------CELL 27--------------
+
+Source:
+
+    %%liveimport --clear
+    import mod1
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 28--------------
+
+Source:
+
+    #
+    # Verify --clear option of %%livemagic
+    #
+    
+    assert is_registered('mod1')
+    assert not is_registered('mod2')
+    assert not is_registered('mod3')
+    assert not is_registered('mod4')
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 29--------------
+
+Source:
+
+    %%liveimport
+    from mod2 import mod2_public1
+    raise RuntimeError("Intentional exception")
+    
+    #@ error RuntimeError
+    #@ missingok
+
+Expected:
+    reloads=[]
+     errors=['RuntimeError']
+         ok=False
+
+Actual:
+    reloads=[]
+     errors=['RuntimeError']
+         ok=False
+
+--------------CELL 30--------------
+
+Source:
+
+    #
+    # Verify that an exception in a %%liveimport cell prevents any registration
+    #
+    
+    assert not is_registered("mod2")
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 32--------------
+
+Source:
+
+    #_%%liveimport
+    # pyright: reportMissingImports=false
+    from mod3 import *
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 33--------------
+
+Source:
+
+    #
+    # Verify hidden cell magic not enabled.
+    #
+    
+    assert not is_registered('mod3')
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 34--------------
+
+Source:
+
+    #
+    # Enable hidden cell magic
+    #
+    
+    liveimport.hidden_cell_magic(enabled=True)
+    body_ran = False
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 35--------------
+
+Source:
+
+    #_%%liveimport
+    # pyright: reportMissingImports=false
+    from mod3 import *
+    body_ran = True
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 36--------------
+
+Source:
+
+    #
+    # Verify hidden cell magic is enabled.
+    #
+    assert body_ran
+    assert is_registered('mod3')
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 38--------------
+
+Source:
+
+    #
+    # Registration of modules in packages.
+    #
+    
+    liveimport.register(globals(),"""
+    import pkg.smod1
+    from pkg.smod2 import smod2_public1
+    from pkg.smod3 import *
+    """, clear=True)
+    
+    assert is_registered("pkg.smod1")
+    assert is_registered("pkg.smod2","smod2_public1")
+    assert is_registered("pkg.smod3","*")
+    
+    liveimport.hidden_cell_magic(enabled=True)
+    
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 39--------------
+
+Source:
+
+    #
+    # Verify syncing of updated modules in packages
+    #
+    
+    smod1_tag = get_tag("pkg.smod1")
+    smod2_tag = get_tag("pkg.smod2")
+    smod3_tag = get_tag("pkg.smod3")
+    
+    touch_module("pkg.smod1")
+    touch_module("pkg.smod2")
+    touch_module("pkg.smod3")
+    
+    liveimport.sync()
+    
+    expect_tag("pkg.smod1",next_tag(smod1_tag))
+    expect_tag("pkg.smod2",next_tag(smod2_tag))
+    expect_tag("pkg.smod3",next_tag(smod3_tag))
+    
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 40--------------
+
+Source:
+
+    #
+    # Prepare to verify cell magic
+    #
+    
+    liveimport.register(globals(),"",clear=True)
+    assert not is_registered("pkg.smod1")
+    assert not is_registered("pkg.smod2")
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 41--------------
+
+Source:
+
+    %%liveimport --clear
+    import pkg.smod1
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 42--------------
+
+Source:
+
+    #
+    # Verify normal cell magic for modules in packages
+    #
+    
+    assert is_registered("pkg.smod1")
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 43--------------
+
+Source:
+
+    #_%%liveimport --clear
+    # pyright: reportMissingImports=false
+    from pkg.smod2 import smod2_public1
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 44--------------
+
+Source:
+
+    #
+    # Verify hidden cell magic for modules in packages
+    #
+    
+    assert is_registered("pkg.smod2")
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 47--------------
+
+Source:
+
+    #
+    # Disable auto syncing and prepare to verifying that it is off.
+    #
+    
+    liveimport.auto_sync(enabled=False)
+    
+    liveimport.register(globals(), "import mod1", clear=True)
+    mod1_tag = get_tag("mod1")
+    touch_module("mod1")
+    
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 48--------------
+
+Source:
+
+    #
+    # There should have been no reloading since autosync is disabled.  But an
+    # explicit sync should reload.
+    #
+    
+    expect_tag("mod1",mod1_tag)
+    
+    liveimport.sync()
+    
+    expect_tag("mod1",next_tag(mod1_tag))
+    
+    ok()
+    
+    liveimport.auto_sync(enabled=True)
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 50--------------
+
+Source:
+
+    #
+    # Disable reporting and touch mod1.
+    #
+    
+    liveimport.auto_sync(report=False)
+    
+    liveimport.register(globals(), "import mod1", clear=True)
+    mod1_tag = get_tag("mod1")
+    touch_module("mod1")
+    
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 51--------------
+
+Source:
+
+    #
+    # Should have synced, but there should be no "Reloaded ..." message.
+    #
+    
+    expect_tag("mod1",next_tag(mod1_tag))
+    
+    liveimport.auto_sync(report=True)
+    
+    ok()
+    
+    #TEMPORARILY
+    #@ reload mod1
+
+Expected:
+    reloads=['mod1']
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=['mod1']
+     errors=[]
+         ok=True
+
+--------------CELL 53--------------
+
+Source:
+
+    #
+    # Go back to non-zero grace, 250 milliseconds.
+    #
+    
+    liveimport.auto_sync(grace=0.25)
+    mod1_tag = get_tag("mod1")
+    touch_module("mod1")
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 54--------------
+
+Source:
+
+    #
+    # No sleepbefore declaration, so there should be no reload.
+    #
+    
+    print("mod1_tag",mod1_tag)
+    expect_tag("mod1",mod1_tag)
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=[]
+     errors=[]
+         ok=True
+
+--------------CELL 55--------------
+
+Source:
+
+    #
+    # Pre-run sleep of 500 milliseconds, so expect a reload.
+    #
+    
+    #@ presleep 0.5
+    
+    print("mod1_tag",mod1_tag)
+    expect_tag("mod1",next_tag(mod1_tag))
+    ok()
+
+Expected:
+    reloads=[]
+     errors=[]
+         ok=True
+
+Actual:
+    reloads=['mod1']
+     errors=[]
+         ok=True
+
