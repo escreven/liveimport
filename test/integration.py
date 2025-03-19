@@ -1,4 +1,6 @@
+from __future__ import annotations
 from argparse import ArgumentParser
+import sys
 import time
 from nbconvert.preprocessors import ExecutePreprocessor
 from nbformat import NotebookNode
@@ -9,7 +11,6 @@ import re
 
 #
 # TODO: Verify all declarations work
-# TODO: Consider restructuring so all test activity happens preprocess_cell.
 #
 
 #
@@ -36,86 +37,51 @@ _ERROR_DECL_RE     = re.compile(r"#@\s*error\s+(\w+)\s*")
 _MISSINGOK_DECL_RE = re.compile(r"#@\s*missingok\s*")
 
 
-class SleepableExecutePreprocessor(ExecutePreprocessor):
-    def preprocess_cell(self, cell:NotebookNode, resources, index):
-        if cell.cell_type == 'code':
-            sleep = 0.0
-            for line in cell.source.split('\n'):
-                if (match := _PRESLEEP_DECL_RE.fullmatch(line)):
-                    try:
-                        sleep = max(sleep,float(match[1]))
-                    except ValueError:
-                        raise RuntimeError(
-                            "Bad presleep declaration: " + line)
-            if sleep > 0:
-                time.sleep(sleep)
-        cell, resources = super().preprocess_cell(cell,resources,index)
-        return cell, resources
+class _Declarations:
 
+    __slots__ = "reloads", "errors", "missingok", "presleep"
 
-def _clear_output(nb:NotebookNode):
-    for cell in nb.cells:
-        if hasattr(cell,'outputs'):
-            cell.outputs.clear()
-
-
-def _run_notebook(filename:str, dir:str):
-
-    config = Config()
-    config.InteractiveShell.colors = 'NoColor'
-
-    nb = nbformat.read(filename,as_version=4)
-    _clear_output(nb)
-
-    if (len(nb.cells) < 2 or
-    (setup_cell := nb.cells[1]).cell_type != 'code' or 
-    not re.search(r'^SCRIPTED_TEST\s*=\s*False\s*$',
-                    setup_cell.source, re.MULTILINE)):
-        raise RuntimeError("Did not find setup cell")
-    
-    setup_cell.source += '\nSCRIPTED_TEST = True\n'
-
-    SleepableExecutePreprocessor(kernel_name="python3", 
-                                 config=config).preprocess(
-        nb, resources={ "metadata": { "path": dir } })
-    return nb
-
-
-def _indent(s:str):
-    # textwrap.indent() doesn't handle blank lines the way we want.
-    lines = s.rstrip().split('\n')
-    return '\n'.join("    " + line for line in lines)
-
-
-class _Expect:
     reloads   : list[str]
     errors    : list[str]
     missingok : bool
+    presleep  : float
 
-    def __init__(self, source:str):
-        self.reloads = []
-        self.errors  = []
-        self.ok      = True
+    def __init__(self, cell:NotebookNode):
+        self.reloads   = []
+        self.errors    = []
+        self.missingok = False
+        self.presleep  = 0.0
 
-        for line in source.split('\n'):
+        for line in cell.source.split('\n'):
             if line.startswith("#@"):
                 if (match := _RELOAD_DECL_RE.fullmatch(line)):
                     self.reloads.append(match[1])
                 elif (match := _ERROR_DECL_RE.fullmatch(line)):
                     self.errors.append(match[1])
                 elif (match := _MISSINGOK_DECL_RE.fullmatch(line)):
-                    self.ok = False
-                elif _PRESLEEP_DECL_RE.fullmatch(line):
-                    # Already processed
-                    pass
+                    self.missingok = True
+                elif (match := _PRESLEEP_DECL_RE.fullmatch(line)):
+                    try:
+                        self.presleep = float(match[1])
+                    except ValueError:
+                        raise RuntimeError(
+                            "Bad presleep declaration: " + line)                    
                 else:
                     raise ValueError(
                         "Bad declaration in notebook code cell: " + line)
                 
+    def permits(self, found:_Found):
+        return (self.reloads   == found.reloads and 
+                self.errors    == found.errors and
+                self.missingok == (not found.ok))
+                
 
 _RELOADED_LINE_RE = re.compile(r"^Reloaded (\w+) ")
 
-class _Actual:
+class _Found:
+
+    __slots__ = "reloads", "errors", "ok"
+
     reloads : list[str]
     errors  : list[str]
     ok      : bool
@@ -139,6 +105,89 @@ class _Actual:
                 self.errors.append(output.ename)
 
 
+def _indent(s:str):
+    # textwrap.indent() doesn't handle blank lines the way we want.
+    lines = s.rstrip().split('\n')
+    return '\n'.join("    " + line for line in lines)
+
+
+class _TestbenchPreprocessor(ExecutePreprocessor):
+
+    __slots__ = "verbose"
+
+    def __init__(self, config:Config, verbose:bool):
+        super().__init__(kernel_name="python3",config=config)
+        self.verbose = verbose
+
+    def preprocess_cell(self, cell:NotebookNode, resources, index):
+
+        if cell.cell_type != 'code':
+            return super().preprocess_cell(cell,resources,index)
+
+        decls = _Declarations(cell)
+
+        if decls.presleep > 0:
+            time.sleep(decls.presleep)
+
+        try:
+            cell, resources = super().preprocess_cell(cell,resources,index)
+            error = None
+        except BaseException as ex:
+            error = ex
+
+        found = _Found(cell)
+        good  = error is None and decls.permits(found)
+
+        if self.verbose or not good:
+            print()
+            print(f"--------------CELL {index}--------------")
+            print()
+            print("Source:")
+            print()
+            print(_indent(cell.source))
+            print()
+            print("Declarations:")
+            print(f"    reloads={decls.reloads}")
+            print(f"     errors={decls.errors}")
+            print(f"  missingok={decls.missingok}")
+            print(f"   presleep={decls.presleep}")
+            print()
+            print("Found:")
+            print(f"    reloads={found.reloads}")
+            print(f"     errors={found.errors}")
+            print(f"         ok={found.ok}")
+
+        if not good:
+            print()
+            sys.stdout.flush()
+            if error is not None:
+                raise RuntimeError("Unexpected notebook cell error") from error
+            else:
+                raise RuntimeError("Unexpected notebook output")
+        
+        return cell, resources
+
+
+def _clear_output(nb:NotebookNode):
+    for cell in nb.cells:
+        if hasattr(cell,'outputs'):
+            cell.outputs.clear()
+
+
+_SCRIPTED_FALSE_RE = re.compile(
+    r'^SCRIPTED_TEST\s*=\s*False\s*$',
+    re.MULTILINE)
+
+def _add_scripted_indicator(nb:NotebookNode):
+
+    if (len(nb.cells) > 1 and 
+        (setup_cell := nb.cells[1]).cell_type == 'code' and
+        _SCRIPTED_FALSE_RE.search(setup_cell.source)):
+            setup_cell.source += '\nSCRIPTED_TEST = True\n'
+    else:
+        raise RuntimeError("Did not find setup cell")
+
+
 def test_notebook(verbose:bool=False):
     """
     Verify notebook integration.
@@ -150,40 +199,22 @@ def test_notebook(verbose:bool=False):
     if not dir: dir = '.'
     filename = os.path.dirname(__file__) + '/notebook.ipynb'
 
-    nb = _run_notebook(filename,dir)
+    config = Config()
+    config.InteractiveShell.colors = 'NoColor'
 
-    for i, cell in enumerate(nb.cells):
-        if cell.cell_type == 'code':
-            expect = _Expect(cell.source)
-            actual = _Actual(cell)
-            good = (expect.reloads == actual.reloads and 
-                    expect.errors  == actual.errors and
-                    expect.ok == actual.ok)
-            if verbose or not good:
-                print()
-                print(f"--------------CELL {i}--------------")
-                print()
-                print("Source:")
-                print()
-                print(_indent(cell.source))
-                print()
-                print("Expected:")
-                print(f"    reloads={expect.reloads}")
-                print(f"     errors={expect.errors}")
-                print(f"         ok={expect.ok}")
-                print()
-                print("Actual:")
-                print(f"    reloads={actual.reloads}")
-                print(f"     errors={actual.errors}")
-                print(f"         ok={actual.ok}")
-            if not good:
-                print()
-                raise RuntimeError("Notebook integration test failed")
+    nb = nbformat.read(filename,as_version=4)
+    _clear_output(nb)
+    _add_scripted_indicator(nb)
+
+    _TestbenchPreprocessor(config, verbose).preprocess(
+        nb, resources={ "metadata": { "path": dir } })
+    
+    return nb
 
 
 #
-# One can run this module directly, if desired.  This is mostly used to debug
-# notebook interaction.
+# One can run this module directly, if desired.  This is useful to debug
+# integration.py itself.
 #
 
 if __name__ == '__main__':
