@@ -143,7 +143,13 @@ function require_git_clean {
     [[ -z "$(git ls-files --others --exclude-standard)" ]] \
         || fail "There are untracked files"
 
-    [[ $(git rev-parse HEAD) == "$(git rev-parse "$branch_or_tag")" ]] \
+    #
+    # Using "rev-list -1" on the right because rev-parse of an annotated tag is
+    # the hash of the annotation object, not the commit id.  "rev-list -1"
+    # works for branches and annotated tags.
+    #
+
+    [[ $(git rev-parse HEAD) == "$(git rev-list -1 "$branch_or_tag")" ]] \
         || fail "Local repo not synced with $branch_or_tag"
 }
 
