@@ -216,7 +216,7 @@ class _LiveImportHandler:
                     sync_ex = None
                 except Exception as ex:
                     sync_ex = ex
-                if events:
+                if events and self.autosync_report:
                     _display_reload_events(events)
                 if isinstance(sync_ex,ModuleError):
                     sync_ex = sync_ex.__cause__

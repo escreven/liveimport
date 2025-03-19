@@ -8,9 +8,6 @@ import os
 import re
 
 #
-# TODO: Inject "AUTOMATIC_TEST = True" in first code cell.
-# TODO: Modify notebook.ipynb to bytepass tests that can't work manually.
-# TODO: Find and fix reload report bug
 # TODO: Verify all declarations work
 # TODO: Consider restructuring so all test activity happens preprocess_cell.
 #
@@ -52,7 +49,8 @@ class SleepableExecutePreprocessor(ExecutePreprocessor):
                             "Bad presleep declaration: " + line)
             if sleep > 0:
                 time.sleep(sleep)
-        return super().preprocess_cell(cell,resources,index)
+        cell, resources = super().preprocess_cell(cell,resources,index)
+        return cell, resources
 
 
 def _clear_output(nb:NotebookNode):
@@ -62,10 +60,21 @@ def _clear_output(nb:NotebookNode):
 
 
 def _run_notebook(filename:str, dir:str):
+
     config = Config()
     config.InteractiveShell.colors = 'NoColor'
+
     nb = nbformat.read(filename,as_version=4)
     _clear_output(nb)
+
+    if (len(nb.cells) < 2 or
+    (setup_cell := nb.cells[1]).cell_type != 'code' or 
+    not re.search(r'^SCRIPTED_TEST\s*=\s*False\s*$',
+                    setup_cell.source, re.MULTILINE)):
+        raise RuntimeError("Did not find setup cell")
+    
+    setup_cell.source += '\nSCRIPTED_TEST = True\n'
+
     SleepableExecutePreprocessor(kernel_name="python3", 
                                  config=config).preprocess(
         nb, resources={ "metadata": { "path": dir } })
