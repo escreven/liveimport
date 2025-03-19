@@ -178,3 +178,7 @@ cython_debug/
 
 # Temporary output files
 .out
+
+# Ignored version of op.sh that makes it easier to test op.sh changes related
+# to requring a clean, synchronized tree.
+private-op.sh
