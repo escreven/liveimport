@@ -53,7 +53,7 @@ function require_consistent_version {
 
     [[ -z $python_version ]] \
         && fail "Could not find version in liveimport.py"
-        
+
     [[ $pyproject_version == "$python_version" ]] \
         || fail "Version mismatch: pyproject.toml ($pyproject_version)" \
                 "!= src/liveimport.py ($python_version)"
@@ -104,16 +104,21 @@ function require_releasable_version {
 function require_good_build {
     local version=$1
 
-    [[ -d dist ]] || fail "Distribution directory dist/ does not exist"  
+    [[ -d dist ]] || fail "Distribution directory dist/ does not exist"
+
+    [[ -f $(wheel_file $version) && -f $(sdist_file $version) ]] \
+        || fail "Version $version not built"
+
+    #
+    # We don't need to worry about ls dist/*.whl failing because we knwow there
+    # is at least one .whl file there.
+    #
 
     local count
     count=$(ls dist/*.whl 2>/dev/null | wc -l)
 
 	[[ $count -eq 1 ]] || fail "Expected one built version; found" "$count"
 
-    [[ -f $(wheel_file $version) && -f $(sdist_file $version) ]] \
-        || fail "Version $version not built"
-        
     local version=$1
     $PYTHON -m twine check \
             "$(wheel_file "$version")" \
@@ -135,7 +140,7 @@ function require_git_clean {
 
     [[ $current_branch == main ]] \
         || fail "On branch $current_branch, not main"
-    
+
     git diff --quiet || fail "There are unstaged changes"
 
     git diff --cached --quiet || fail "There are uncommitted changes"
@@ -143,7 +148,13 @@ function require_git_clean {
     [[ -z "$(git ls-files --others --exclude-standard)" ]] \
         || fail "There are untracked files"
 
-    [[ $(git rev-parse HEAD) == "$(git rev-parse "$branch_or_tag")" ]] \
+    #
+    # Using "rev-list -1" on the right because rev-parse of an annotated tag is
+    # the hash of the annotation object, not the commit id.  "rev-list -1"
+    # works for branches and annotated tags.
+    #
+
+    [[ $(git rev-parse HEAD) == "$(git rev-list -1 "$branch_or_tag")" ]] \
         || fail "Local repo not synced with $branch_or_tag"
 }
 
@@ -155,9 +166,9 @@ function require_git_clean {
 
 function build_dist {
 
-    [[ -d dist ]] || fail "Distribution directory dist/ does not exist"  
+    [[ -d dist ]] || fail "Distribution directory dist/ does not exist"
 
-    local version 
+    local version
     version=$(require_consistent_version)
     require_not_released "$version"
 
@@ -173,12 +184,12 @@ function build_dist {
 }
 
 #
-# Check the wheel and sdist files.  
+# Check the wheel and sdist files.
 #
 
 function check_dist {
 
-    local version 
+    local version
     version=$(require_consistent_version)
     require_good_build $version
 }
@@ -216,7 +227,7 @@ function declare_release {
 }
 
 #
-# Upload to TestPyPI or PyPI.  
+# Upload to TestPyPI or PyPI.
 #
 # The project version must have a good build and must be released.  The local
 # repo must be a clean tree synchronized with the release tag.  Because
@@ -235,7 +246,7 @@ upload_dist() {
     require_releasable_version "$version"
     require_good_build "$version"
     require_released "$version"
-    require_git_clean "v$version"    
+    require_git_clean "v$version"
 
     local confirm
     echo
@@ -248,7 +259,8 @@ upload_dist() {
         exit 1
     fi
 
-    $PYTHON -m twine upload --repository "$repo" dist/*
+    $PYTHON -m twine upload --repository "$repo" \
+        $(wheel_file $version) $(sdist_file $version)    
 }
 
 #
@@ -259,7 +271,7 @@ usage() {
     echo "Usage: $0 ACTION"
     echo
     echo "Where ACTION is one of"
-    echo 
+    echo
     echo "    build-doc           Build the documentation"
     echo "    build-dist          Build wheel and sdist files in dist/"
     echo "    check-dist          Verify the distribution files"
@@ -270,7 +282,7 @@ usage() {
     echo "    clean-doc           Delete documentation"
     echo "    clean-dist          Delete distribution files"
     echo "    clean               Delete both doc and distribution files"
-    echo 
+    echo
     echo "The deployment actions require user confirmation."
     echo
     exit 1
