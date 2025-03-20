@@ -128,7 +128,7 @@ instead.
    statement in Python source that is not nested within another Python
    construct such as an ``if`` or ``try`` statement.
 """
-__version__ = "0.9.3"
+__version__ = "0.9.4.dev1"
 
 import math
 import re

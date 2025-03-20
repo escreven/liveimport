@@ -10,10 +10,6 @@ import os
 import re
 
 #
-# TODO: Verify all declarations work
-#
-
-#
 # This module tests LiveImport's notebook integration.  It runs the cells of
 # notebook.ipynb which be in the same directory as this and the other test
 # modules, including common.py. 
