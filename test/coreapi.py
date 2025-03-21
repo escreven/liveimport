@@ -135,7 +135,6 @@ def test_undefined_symbol():
     """
     Registering an import statement with undefined module symbols should fail.
     """
-    
     try:
         liveimport.register(globals(),"from mod1 import does_not_exist")
         error = None
@@ -322,6 +321,7 @@ def test_sync_syntax_error():
             error = ex
         
         assert error is not None
+        assert 'Analysis of mod1' in str(error) 
         assert isinstance(error.__cause__,SyntaxError)
         reload_expect()
     

@@ -85,9 +85,9 @@ def test_register_relative():
     assert is_registered("pkg.smod2","smod2_public1")
 
 
-def test_register_bad_relative():
+def test_register_escaping_relative():
     """
-    register() should raise ImportError for invalid relative imports.
+    register() should raise ImportError for relative imports going too far.
     """
     try:
         liveimport.register(globals(),"from ... smod2 import smod2_public1",
@@ -96,4 +96,18 @@ def test_register_bad_relative():
     except ImportError as ex:
         error = ex
     
-    assert error is not None
+    assert error is not None and "escape" in str(error)
+
+
+def test_register_relative_without_package():
+    """
+    regisister() should raise an ImportError for relative imports in
+    non-package source."
+    """
+    try:
+        liveimport.register(globals(),"from . mod1 import mod1_public")
+        error = None
+    except ImportError as ex:
+        error = ex
+    
+    assert error is not None and "outside any package" in str(error)

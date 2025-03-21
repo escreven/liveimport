@@ -139,7 +139,7 @@ import time
 from types import ModuleType
 from os.path import getmtime
 from importlib import reload
-from typing import Any, Callable, Literal, NoReturn, cast
+from typing import Any, Callable, Literal, NoReturn, TextIO
 import IPython
 from IPython.display import display, Markdown
 from IPython.core.magic import Magics, magics_class, cell_magic
@@ -354,10 +354,10 @@ class _ModuleInfo:
 
         spec = module.__spec__
         if spec is None:
-            raise ValueError("Module {module.__name__} has no spec")
+            raise ValueError(f"Module {module.__name__} has no spec")
 
         if not spec.has_location:
-            raise ValueError("Module {module.__name__} has no associated file")
+            raise ValueError(f"Module {module.__name__} has no source file")
 
         assert (file := spec.origin) is not None
         assert (parent := spec.parent) is not None
@@ -516,16 +516,16 @@ def _register_imports(namespace:dict[str,Any], imports:list[_Import],
 # Dump the module table content (for debugging).
 #
 
-def _dump():
+def _dump(file:TextIO|None=None):
     items = sorted(_MODULE_TABLE.items())
     for name, info in items:
         print(f"Module {name} parent={info.parent}"
               f" mtime={info.mtime} file={info.file}"
-              f" dependencies={info.dependencies}")
+              f" dependencies={info.dependencies}",file=file)
         for nsid, projection in info.projections.items():
-            print(f"  Projection nsid={nsid} star={projection.star}")
+            print(f"  Projection nsid={nsid} star={projection.star}",file=file)
             for alias in sorted(projection.aliases):
-                print(f"    {alias[0]} as {alias[1]}")
+                print(f"    {alias[0]} as {alias[1]}",file=file)
 
 #
 # Check registration status (for testing).
@@ -871,7 +871,7 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
                 #
                 # This is not possible in normal use since reload() never
                 # deletes symbols from loaded modules. Likely it can only
-                # happen if the application explcitly deletes symbols from the
+                # happen if the application explicitly deletes symbols from the
                 # module dictionary.  Because it is so obscure, we judge it
                 # more confusing to document than not.
                 #
