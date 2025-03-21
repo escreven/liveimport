@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #
 # op.sh - A build and deployment script for LiveImport
@@ -11,7 +11,7 @@ if [[ $(uname -s) == CYGWIN* ]]; then
     CYGWIN=1
 else
     PYTHON=python3
-    unset CYWGIN
+    unset CYGWIN
 fi
 
 #
@@ -90,13 +90,13 @@ function require_released {
 
 function require_releasable_version {
     local version=$1
-    [[ $version =~ [0-9]+.[0-9]+.[0-9]+ ]] \
+    [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] \
         || fail "Release versions must be <major>.<minor>.<patch>;" \
                 "have version $version"
 }
 
 #
-# Succeed iff the given version and not other is built, and twine check
+# Succeed iff the given version and no other is built, and twine check
 # succeeds for that build.
 #
 # NOTE: There is currently a bug in twine or setuptools that causes this to
@@ -192,7 +192,7 @@ function report_coverage {
 }
 
 #
-# Get of generated coverage data and reports.
+# Get rid of generated coverage data and reports.
 #
 
 function clean_coverage {
@@ -203,7 +203,7 @@ function clean_coverage {
 #
 # Build the wheel and sdist files.  The current project version must be
 # different than any released version.  build_dist removes the left-over
-# egg-info directory.  Hopefully build will stop leaving behind one day.
+# egg-info directory.  Hopefully build will stop leaving it behind one day.
 #
 
 function build_dist {
@@ -302,7 +302,7 @@ upload_dist() {
     fi
 
     $PYTHON -m twine upload --repository "$repo" \
-        $(wheel_file $version) $(sdist_file $version)    
+        "$(wheel_file $version)" "$(sdist_file $version)"
 }
 
 #
@@ -336,7 +336,7 @@ usage() {
 # ================================ MAIN ======================================
 #
 # This script should be at the root of the project directory -- go there.  The
-# project must have a prproject.toml file, and the project name must be
+# project must have a pyproject.toml file, and the project name must be
 # liveimport.
 #
 

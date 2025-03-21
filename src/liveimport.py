@@ -143,6 +143,8 @@ from typing import Any, Callable, Literal, NoReturn, TextIO
 import IPython
 from IPython.display import display, Markdown
 from IPython.core.magic import Magics, magics_class, cell_magic
+from IPython.core.error import UsageError
+from IPython.core.inputtransformer2 import TransformerManager
 
 __all__ = ("register", "sync", "auto_sync", "hidden_cell_magic",
            "ReloadEvent", "ModuleError")
@@ -152,6 +154,8 @@ __all__ = ("register", "sync", "auto_sync", "hidden_cell_magic",
 #
 
 _IPYTHON_SHELL = IPython.get_ipython()  #type:ignore
+
+_transform_cell = TransformerManager().transform_cell
 
 #
 # Implement %%liveimport cell magic as described in the module docstring.
@@ -168,11 +172,10 @@ class _LiveImportMagics(Magics):
         """
         args = self.parse_options(line,"c","clear")
         if args[1]:
-            print("Bad %%liveimport arguments:",args[1])
-            return
+            raise UsageError(
+                "Extraneous %%liveimport arguments: " + str(args[1]))
         clear = 'c' in args[0] or 'clear' in args[0]
-        text = "\n".join(line for line in cell.split('\n')
-            if len(line) == 0 or line[0] != '%' and line[0] != '!')
+        text = _transform_cell(cell)
         imports = _extract_imports(text,True)
         if (shell := self.shell) is None:
             raise RuntimeError("No IPython shell for %%liveimport magic")
@@ -691,9 +694,9 @@ class ReloadEvent:
     .. attribute:: after
         :type: list[str]
 
-        The modules on which `module` depends which reloaded prior to `module`
-        as part of the same sync.  `after` is never empty if `reason` is
-        ``"dependent"``.
+        The modules on which `module` depends which reloaded as part of the
+        same sync.  If `reason` is ``"dependent"``, `module` reloaded solely
+        because these modules reloaded.
 
     The string representation of a `ReloadEvent`:class: is an English-language
     description similar to

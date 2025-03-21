@@ -4,10 +4,11 @@
 #
 
 from importlib.util import spec_from_loader
+from IPython.core.error import UsageError
 import io
 from types import ModuleType
 import liveimport
-from liveimport import _LiveImportMagics, _Import, _Bindings, _ModuleInfo
+from liveimport import _LiveImportMagics, _Import
 from common import *
 
 
@@ -22,6 +23,21 @@ def test_magic_missing_shell():
     except RuntimeError as ex:
         error = ex
     assert error is not None and "No IPython shell" in str(error)
+
+
+def test_extra_magic_arguments():
+    """
+    %%liveimport cell magic should throw UsageError given arguments past any
+    options.  Testing this in notebook.ipynb isn't possible because notebook
+    execution halts when UsageError is raised.
+    """
+    m = _LiveImportMagics()
+    try:
+        m.liveimport('--clear extra','')
+        error = None
+    except UsageError as ex:
+        error = ex
+    assert error is not None and "extra" in str(error)
 
 
 def test_import_description():
