@@ -12,6 +12,7 @@ import textwrap
 import time
 import tempfile
 from typing import Any
+import liveimport
 from liveimport import ReloadEvent
 
 """
@@ -345,17 +346,18 @@ def expect_tag(modulename:str, tag):
 # well as check reload order.
 #
 
-reload_list:list[str] = []
+reload_list:list[ReloadEvent] = []
 
 def reload_clear():
     reload_list.clear()
 
 def reload_observe(event:ReloadEvent):
-    reload_list.append(event.module)
+    reload_list.append(event)
 
 def reload_expect(*expected:str):
-    if (len(reload_list) != len(expected) or
-        any(reload_list[i] != expected[i] for i in range(0,len(expected)))):
+    reports = [ event.module for event in reload_list ]
+    if (len(reports) != len(expected) or
+        any(reports[i] != expected[i] for i in range(0,len(expected)))):
         print("UNEXPECTED RELOAD REPORT(S)")
         print()
         print("Expected")
@@ -406,6 +408,8 @@ def describe_environment() -> dict[str,str|None]:
     else:
         print("Notebook not installed")
     
+    print("LiveImport", liveimport.__version__)
+
     if _KEEP_TEMPDIR:
         print("Will keep temporary directory on exit")
 

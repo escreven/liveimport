@@ -8,8 +8,10 @@ set -euo pipefail
 
 if [[ $(uname -s) == CYGWIN* ]]; then
     PYTHON=py
+    CYGWIN=1
 else
     PYTHON=python3
+    unset CYWGIN
 fi
 
 #
@@ -159,6 +161,46 @@ function require_git_clean {
 }
 
 #
+# Run tests with coverage measurement and report the results.
+#
+
+function report_coverage {
+
+    $PYTHON -m coverage run \
+        --data-file .coverage.main \
+        --include 'src/liveimport.py,test/*.py' test/main.py
+
+    [[ -f .coverage.main     ]] || fail "Can't find main coverage data"
+    [[ -f .coverage.notebook ]] || fail "Can't find notebook coverage data"
+
+    $PYTHON -m coverage combine
+
+    $PYTHON -m coverage report -m
+
+    $PYTHON -m coverage html
+
+    local path
+    path=$(realpath -e htmlcov/index.html) || \
+        fail "Can't find generated HTML report"
+
+    if [[ $CYGWIN ]]; then
+        path=$(cygpath -w "$path")
+    fi
+
+    echo "Path to HTML report follows."
+    echo "$path"
+}
+
+#
+# Get of generated coverage data and reports.
+#
+
+function clean_coverage {
+
+    /bin/rm -rf .coverage .coverage.* htmlcov 2> /dev/null || true
+}
+
+#
 # Build the wheel and sdist files.  The current project version must be
 # different than any released version.  build_dist removes the left-over
 # egg-info directory.  Hopefully build will stop leaving behind one day.
@@ -272,6 +314,7 @@ usage() {
     echo
     echo "Where ACTION is one of"
     echo
+    echo "    report-coverage     Measure and report test coverage"
     echo "    build-doc           Build the documentation"
     echo "    build-dist          Build wheel and sdist files in dist/"
     echo "    check-dist          Verify the distribution files"
@@ -279,6 +322,7 @@ usage() {
     echo "    declare-release     Tag current clean main branch as a release"
     echo "    deploy-to-testpypi  Upload distribution files to TestPyPI"
     echo "    deploy-to-pypi      Upload distribution files to PyPI"
+    echo "    clean-coverage      Delete coverage data and reports"
     echo "    clean-doc           Delete documentation"
     echo "    clean-dist          Delete distribution files"
     echo "    clean               Delete both doc and distribution files"
@@ -319,41 +363,52 @@ if [[ $# -lt 1 ]]; then
     usage
 fi
 
-case "$1" in
-    build-doc)
-        make -C doc html
-        ;;
-    build-dist)
-        build_dist
-        ;;
-    check-dist)
-        check_dist
-        ;;
-    check-clean-main)
-        require_git_clean remotes/origin/main
-        ;;
-    declare-release)
-        declare_release
-        ;;
-    deploy-to-testpypi)
-        upload_dist TestPyPI testpypi
-        ;;
-    deploy-to-pypi)
-        upload_dist PyPI pypi
-        ;;
-    clean-doc)
-        make -C doc clean
-        ;;
-    clean-dist)
-        rm -rf dist/*
-        ;;
-    clean)
-        make -C doc clean >/dev/null
-        rm -rf dist/*
-        ;;
-    *)
-        usage
-        ;;
-esac
+function act {
+    case "$1" in
+        report-coverage)
+            report_coverage
+            ;;
+        build-doc)
+            make -C doc html
+            ;;
+        build-dist)
+            build_dist
+            ;;
+        check-dist)
+            check_dist
+            ;;
+        check-clean-main)
+            require_git_clean remotes/origin/main
+            ;;
+        declare-release)
+            declare_release
+            ;;
+        deploy-to-testpypi)
+            upload_dist TestPyPI testpypi
+            ;;
+        deploy-to-pypi)
+            upload_dist PyPI pypi
+            ;;
+        clean-coverage)
+            clean_coverage
+            ;;
+        clean-doc)
+            rm -rf doc/_build/*
+            ;;
+        clean-dist)
+            rm -rf dist/*
+            ;;
+        clean)
+            act clean-coverage
+            act clean-doc
+            act clean-dist
+            ;;
+        *)
+            usage
+            ;;
+    esac
+}
+
+act $1
 
 echo "Done."

@@ -13,6 +13,7 @@ import coreapi
 import relative
 import dependencies
 import notimported
+import obscurities
 import integration
 
 
@@ -59,6 +60,7 @@ def main():
     cases.extend(_get_cases(relative))
     cases.extend(_get_cases(dependencies))
     cases.extend(_get_cases(notimported))
+    cases.extend(_get_cases(obscurities))
     cases.extend(_get_cases(integration))
 
     if (pattern := args.pattern) is not None:

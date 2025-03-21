@@ -8,10 +8,7 @@ from traitlets.config import Config
 import nbformat
 import os
 import re
-
-#
-# TODO: Verify all declarations work
-#
+import coverage
 
 #
 # This module tests LiveImport's notebook integration.  It runs the cells of
@@ -31,11 +28,14 @@ if os.name == 'nt':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
+#
+# Declarations extracted from the source of one code cell.
+#
+
 _PRESLEEP_DECL_RE  = re.compile(r"#@\s*presleep\s+([0-9.]+)\s*")
 _RELOAD_DECL_RE    = re.compile(r"#@\s*reload\s+(\w+)\s*")
 _ERROR_DECL_RE     = re.compile(r"#@\s*error\s+(\w+)\s*")
 _MISSINGOK_DECL_RE = re.compile(r"#@\s*missingok\s*")
-
 
 class _Declarations:
 
@@ -76,6 +76,10 @@ class _Declarations:
                 self.missingok == (not found.ok))
                 
 
+#
+# Portions of the output of one executed code cell relevant to the tester.
+#
+
 _RELOADED_LINE_RE = re.compile(r"^Reloaded (\w+) ")
 
 class _Found:
@@ -104,12 +108,19 @@ class _Found:
             elif otype == 'error':
                 self.errors.append(output.ename)
 
+#
+# textwrap.indent() doesn't handle blank lines the way we want.
+#
 
 def _indent(s:str):
-    # textwrap.indent() doesn't handle blank lines the way we want.
     lines = s.rstrip().split('\n')
     return '\n'.join("    " + line for line in lines)
 
+
+#
+# Execute a notebook under test, verifying what is declared in the notebook to
+# be expected.
+#
 
 class _TestbenchPreprocessor(ExecutePreprocessor):
 
@@ -168,24 +179,62 @@ class _TestbenchPreprocessor(ExecutePreprocessor):
         return cell, resources
 
 
-def _clear_output(nb:NotebookNode):
-    for cell in nb.cells:
-        if hasattr(cell,'outputs'):
-            cell.outputs.clear()
-
+#
+# We modify the notebook under test in up to three ways after reading it.
+#
+#   1. Remove all output.  The notebook as stored in the repository should have
+#      no output anyway, but just in case.
+#
+#   2. Append "SCRIPTED_TEST = True" to the setup cell of the notebook.  The
+#      setup cell must be the second cell in the notebook, must be a code cell,
+#      and must include the line "SCRIPTED_TEST = False".  The appended line
+#      means tests in the notebook can differentiate between manual execution
+#      and scripted execution.
+#
+#   3. If and only if code coverage is being measured, prepend code in the
+#      setup cell to start measurement within the notebook, and append a cell
+#      to save the result.  Remember that the notebook runs in a different
+#      process, so coverage must be initiated separately.
+#
 
 _SCRIPTED_FALSE_RE = re.compile(
     r'^SCRIPTED_TEST\s*=\s*False\s*$',
     re.MULTILINE)
 
-def _add_scripted_indicator(nb:NotebookNode):
+_COVERAGE_START = """
+import coverage
+coverage_object = coverage.Coverage(
+    data_file="../.coverage.notebook", 
+    include="../src/liveimport.py")
+coverage_object.start()
+"""
 
-    if (len(nb.cells) > 1 and 
-        (setup_cell := nb.cells[1]).cell_type == 'code' and
-        _SCRIPTED_FALSE_RE.search(setup_cell.source)):
-            setup_cell.source += '\nSCRIPTED_TEST = True\n'
-    else:
-        raise RuntimeError("Did not find setup cell")
+_COVERAGE_END = """
+coverage_object.stop()
+coverage_object.save()
+ok()
+"""
+
+def _prepare(nb:NotebookNode):
+
+    for cell in nb.cells:
+        if hasattr(cell,'outputs'):
+            cell.outputs.clear()    
+
+    if (len(nb.cells) < 2 or 
+        (setup_cell := nb.cells[1]).cell_type != 'code' or
+        not _SCRIPTED_FALSE_RE.search(setup_cell.source)):
+            raise RuntimeError("Did not find setup cell")
+    
+    coverage_active = coverage.Coverage.current() is not None
+
+    source = _COVERAGE_START if coverage_active else ''
+    source += setup_cell.source
+    source += '\nSCRIPTED_TEST = True\n'
+    setup_cell.source = source
+
+    if coverage_active:
+        nb.cells.append(nbformat.v4.new_code_cell(_COVERAGE_END))
 
 
 def test_notebook(verbose:bool=False):
@@ -203,8 +252,7 @@ def test_notebook(verbose:bool=False):
     config.InteractiveShell.colors = 'NoColor'
 
     nb = nbformat.read(filename,as_version=4)
-    _clear_output(nb)
-    _add_scripted_indicator(nb)
+    _prepare(nb)
 
     _TestbenchPreprocessor(config, verbose).preprocess(
         nb, resources={ "metadata": { "path": dir } })

@@ -2,6 +2,7 @@
 # Tests of dependency detection and reload ordering.
 #
 
+import re
 import liveimport
 from common import *
 
@@ -39,6 +40,14 @@ def _test(touch_list:list[str], expect_list:list[str]):
     reload_clear()
     liveimport.sync(observer=reload_observe)
     reload_expect(*expect_list)
+
+    for event in reload_list:
+        name = event.module
+        message = str(event)
+        if event.module in touch_list:
+            assert re.match(rf'Reloaded {name} modified .* ago',message)
+        else:
+            assert re.match(rf'Reloaded {name} because .* reloaded',message)
 
 
 def _define(touch:str, expect:str):
