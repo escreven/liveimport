@@ -11,7 +11,7 @@ if [[ $(uname -s) == CYGWIN* ]]; then
     CYGWIN=1
 else
     PYTHON=python3
-    unset CYGWIN
+    CYGWIN=
 fi
 
 #
@@ -180,14 +180,16 @@ function report_coverage {
     $PYTHON -m coverage html
 
     local path
-    path=$(realpath -e htmlcov/index.html) || \
-        fail "Can't find generated HTML report"
+    path=$(realpath htmlcov/index.html)
+    [[ -f $path ]] || fail "Can't find generated HTML report"
 
     if [[ $CYGWIN ]]; then
-        path=$(cygpath -w "$path")
+        path=$(cygpath -m "$path")
     fi
 
-    echo "Path to HTML report follows."
+    path="file://$path"
+
+    echo "File URI to HTML report follows."
     echo "$path"
 }
 
