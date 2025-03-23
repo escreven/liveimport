@@ -112,14 +112,14 @@ function require_good_build {
         || fail "Version $version not built"
 
     #
-    # We don't need to worry about ls dist/*.whl failing because we knwow there
+    # We don't need to worry about ls dist/*.whl failing because we know there
     # is at least one .whl file there.
     #
 
     local count
     count=$(ls dist/*.whl 2>/dev/null | wc -l)
 
-	[[ $count -eq 1 ]] || fail "Expected one built version; found" "$count"
+    [[ $count -eq 1 ]] || fail "Expected one built version; found" "$count"
 
     local version=$1
     $PYTHON -m twine check \
