@@ -366,7 +366,7 @@ class _ModuleInfo:
         assert (parent := spec.parent) is not None
 
         self.module      = module         # loaded module instance
-        self.file        = file           # source file name 
+        self.file        = file           # source file name
         self.parent      = parent         # parent package or ''
         self.mtime       = getmtime(file) # last known modification time
         self.projections = dict()         # projections keyed by namespace id
@@ -891,13 +891,13 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
         info.mtime = info.next_mtime
 
 
-def auto_sync(*, enabled:bool|None=None, 
-              grace:float|None=None, 
+def auto_sync(*, enabled:bool|None=None,
+              grace:float|None=None,
               report:bool|None=None) -> None:
     """
     Configure automatic sync behavior.  By default, automatic syncing is
     enabled with a grace period of 1.0 seconds and reloads are reported.
-    
+
     :param enabled: LiveImport syncs whenever a notebook cell runs if and only
         if `enabled` is true and a grace period since the end of the last cell
         execution has expired.
