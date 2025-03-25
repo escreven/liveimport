@@ -319,6 +319,7 @@ usage() {
     echo "    report-coverage     Measure and report test coverage"
     echo "    build-doc           Build the documentation"
     echo "    build-dist          Build wheel and sdist files in dist/"
+    echo "    check-version       Verify and print consistent project version"
     echo "    check-dist          Verify the distribution files"
     echo "    check-clean-main    Verify local repo is on clean main branch"
     echo "    declare-release     Tag current clean main branch as a release"
@@ -375,6 +376,10 @@ function act {
             ;;
         build-dist)
             build_dist
+            ;;
+        check-version)
+            version=$(require_consistent_version)
+            echo "Consistent version is \"$version\"."
             ;;
         check-dist)
             check_dist
