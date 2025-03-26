@@ -45,9 +45,9 @@ _setup() generates the following file hierarchy in a temporary directory:
     G.py  ; depends on [none]
 
 All the modules include "import re", "from math import nan", a _tag variable,
-three <basename>_public<n>() functions, three <basename>_public<n>() functions,
+three <basename>_public<n>() functions, three <basename>_private<n>() functions,
 and varying additional imports and __all__ declarations upon which tests rely.
-<basename> is the part of a modules name past the last dot.
+<basename> is the part of a module's name past the last dot.
 
 On first load, a module's tag is the pair (<modulename>,1).  On a reload,
 because the tag already exists in the loaded module, the tag becomes
@@ -144,7 +144,8 @@ def _create_package(packagename:str):
         f.write("")
 
 #
-# Create the temporary directory and file hierarchy.  Note the call to _setup() from the top level just after the 
+# Create the temporary directory and file hierarchy.  Note the call to _setup() from the top level just after the
+# definition of _cleanup().
 #
 
 def _setup():
@@ -321,7 +322,6 @@ def touch_module(modulename:str, sleep:float=0.05):
 #       ... do something that should cause mod1 to reload ...
 #       expect_tag(next_tag(tag))
 # 
-# 
 # Generated modules include a tag variable.  On first load, the tag is the pair
 # (<modulename>,1).  On a reload after a rewrite or touch, because tag already
 # exists in the loaded module, the tag becomes (<modulename>,<prior>+1).  That
@@ -342,7 +342,7 @@ def expect_tag(modulename:str, tag):
 
 #
 # Verify sync() reload events.  While tags verify that modules are actually
-# reloaded, and reload_*() can be used to test the observer option of sync() as
+# reloaded, reload_*() can be used to test the observer option of sync() as
 # well as check reload order.
 #
 
@@ -372,7 +372,7 @@ def reload_expect(*expected:str):
 
 
 #
-# Do not return the temporary directories and files on exit.
+# Do not remove the temporary directories and files on exit.
 #
 
 def keep_tempdir():
