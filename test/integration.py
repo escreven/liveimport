@@ -13,7 +13,7 @@ import coverage
 #
 # This module tests LiveImport's notebook integration.  It runs the cells of
 # notebook.ipynb which be in the same directory as this and the other test
-# modules, including common.py. 
+# modules, including common.py.
 #
 # Function uses this module's __file__ attribute (which it must have) to locate
 # the test notebook, and set the notebook's working directory/
@@ -65,16 +65,16 @@ class _Declarations:
                         self.presleep = float(match[1])
                     except ValueError:
                         raise RuntimeError(
-                            "Bad presleep declaration: " + line)                    
+                            "Bad presleep declaration: " + line)
                 else:
                     raise ValueError(
                         "Bad declaration in notebook code cell: " + line)
-                
+
     def permits(self, found:_Found):
-        return (self.reloads   == found.reloads and 
+        return (self.reloads   == found.reloads and
                 self.errors    == found.errors and
                 self.missingok == (not found.ok))
-                
+
 
 #
 # Portions of the output of one executed code cell relevant to the tester.
@@ -175,7 +175,7 @@ class _TestbenchPreprocessor(ExecutePreprocessor):
                 raise RuntimeError("Unexpected notebook cell error") from error
             else:
                 raise RuntimeError("Unexpected notebook output")
-        
+
         return cell, resources
 
 
@@ -204,7 +204,7 @@ _SCRIPTED_FALSE_RE = re.compile(
 _COVERAGE_START = """
 import coverage
 coverage_object = coverage.Coverage(
-    data_file="../.coverage.notebook", 
+    data_file="../.coverage.notebook",
     include="../src/liveimport.py")
 coverage_object.start()
 """
@@ -219,13 +219,13 @@ def _prepare(nb:NotebookNode):
 
     for cell in nb.cells:
         if hasattr(cell,'outputs'):
-            cell.outputs.clear()    
+            cell.outputs.clear()
 
-    if (len(nb.cells) < 2 or 
+    if (len(nb.cells) < 2 or
         (setup_cell := nb.cells[1]).cell_type != 'code' or
         not _SCRIPTED_FALSE_RE.search(setup_cell.source)):
             raise RuntimeError("Did not find setup cell")
-    
+
     coverage_active = coverage.Coverage.current() is not None
 
     source = _COVERAGE_START if coverage_active else ''
@@ -243,7 +243,7 @@ def test_notebook(verbose:bool=False):
     """
     if '__file__' not in globals():
         raise RuntimeError("Notebook integration test requires __file__")
-    
+
     dir = os.path.dirname(__file__)
     if not dir: dir = '.'
     filename = os.path.dirname(__file__) + '/notebook.ipynb'
@@ -256,7 +256,7 @@ def test_notebook(verbose:bool=False):
 
     _TestbenchPreprocessor(config, verbose).preprocess(
         nb, resources={ "metadata": { "path": dir } })
-    
+
     return nb
 
 
@@ -266,7 +266,7 @@ def test_notebook(verbose:bool=False):
 #
 
 if __name__ == '__main__':
-    
+
     from argparse import ArgumentParser
 
     parser = ArgumentParser(
@@ -274,7 +274,7 @@ if __name__ == '__main__':
 
     parser.add_argument("-verbose",action="store_true",
         help="Print detailed information for every cell")
-    
-    args = parser.parse_args()    
+
+    args = parser.parse_args()
 
     test_notebook(args.verbose)

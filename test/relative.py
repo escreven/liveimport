@@ -62,7 +62,7 @@ def test_bad_relative_import_dependency():
             error = None
         except liveimport.ModuleError as ex:
             error = ex
-        
+
         assert error is not None
         assert isinstance(error.__cause__,ImportError)
 
@@ -95,7 +95,7 @@ def test_register_escaping_relative():
         error = None
     except ImportError as ex:
         error = ex
-    
+
     assert error is not None and "escape" in str(error)
 
 
@@ -109,5 +109,5 @@ def test_register_relative_without_package():
         error = None
     except ImportError as ex:
         error = ex
-    
+
     assert error is not None and "outside any package" in str(error)

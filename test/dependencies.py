@@ -16,7 +16,7 @@ from common import *
 #     E -> A
 #     F -> [none]
 #     G -> [none]
-#   
+#
 # There is a cycle A->C->E->A.  Because imports from E are registered after
 # those from A and C, arc E->A should be effectively ignored.
 #
@@ -25,7 +25,7 @@ from common import *
 # implemented by function test().  Argument touch is whitespace separated list
 # of modules to modify.  Argument expect is whitespace separated list of
 # modules for which reload is expected in the order given.
-# 
+#
 
 
 def _test(touch_list:list[str], expect_list:list[str]):
@@ -60,7 +60,7 @@ def _define(touch:str, expect:str):
     doc = "    Touching {}, expecting reloads of {}".format(
         ", ".join(touch_list),
         ", ".join(expect_list))
-    
+
     fn = lambda: _test(touch_list,expect_list)
     fn.__name__ = name
     fn.__doc__ = doc
