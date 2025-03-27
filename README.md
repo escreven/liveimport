@@ -11,7 +11,7 @@ notebook, you might write
 ```python
 import liveimport
 import numpy as np
-import matplotlib.plot as plot
+import matplotlib.pyplot as plot
 
 import symcode
 from printmath import print_math, print_equations as print_eq
@@ -25,8 +25,8 @@ from simulator import *
 ```
 
 Then, whenever you run cells, LiveImport will reload any of ``symcode``,
-``printmath``, and ``simulator`` that have changed since they were registered
-or last reloaded.  LiveImport deems a module changed when its source file
+``printmath``, and ``simulator`` that have changed since registration or their
+last reload.  LiveImport deems a module changed when its source file
 modification time changes.
 
 LiveImport also updates imported module symbols.  For example, if you modify
@@ -73,7 +73,7 @@ A complete cell magic example equivalent to the first begins with cell
 ```python
 import liveimport
 import numpy as np
-import matplotlib.plot as plot
+import matplotlib.pyplot as plot
 liveimport.hidden_cell_magic(enabled=True)
 ```
 
@@ -118,5 +118,5 @@ LiveImport requires Python 3.10 or greater and IPython 7.16.1 or greater.
 
 ## Questions or Issues
 
-If you have any questions or encounter any issues, please submit them 
+If you have any questions or encounter any issues, please submit them
 [on GitHub](https://github.com/escreven/liveimport/issues).

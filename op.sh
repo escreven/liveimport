@@ -15,6 +15,12 @@ else
 fi
 
 #
+# The name of the LiveImport public remote.
+#
+
+PUBLIC=public
+
+#
 # Report fatal error to stderr and exit.
 #
 
@@ -130,8 +136,8 @@ function require_good_build {
 
 #
 #  Succeed iff the local repo is on branch main with a clean tree synchronized
-#  with the given branch or tag (which should be either remotes/origin/main or
-#  the release tag).
+#  with the given branch or tag (which should be either $PUBLIC/main or the
+#  release tag).
 #
 
 function require_git_clean {
@@ -147,8 +153,8 @@ function require_git_clean {
 
     git diff --cached --quiet || fail "There are uncommitted changes"
 
-    [[ -z "$(git ls-files --others --exclude-standard)" ]] \
-        || fail "There are untracked files"
+    git status --porcelain | grep -q '^??' \
+        && fail "There are untracked files"
 
     #
     # Using "rev-list -1" on the right because rev-parse of an annotated tag is
@@ -263,11 +269,11 @@ function declare_release {
     require_releasable_version "$version"
     require_not_released "$version"
     require_good_build "$version"
-    require_git_clean remotes/origin/main
+    require_git_clean $PUBLIC/main
 
     tag="v$version"
     git tag -a "$tag" -m "Release $version"
-    git push origin "$tag"
+    git push $PUBLIC "$tag"
 }
 
 #
@@ -385,7 +391,7 @@ function act {
             check_dist
             ;;
         check-clean-main)
-            require_git_clean remotes/origin/main
+            require_git_clean $PUBLIC/main
             ;;
         declare-release)
             declare_release
