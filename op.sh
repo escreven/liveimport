@@ -147,7 +147,7 @@ function require_git_clean {
 
     git diff --cached --quiet || fail "There are uncommitted changes"
 
-    [[ -z "$(git ls-files --others --exclude-standard)" ]] \
+    git status --porcelain | grep -q '^??' \
         || fail "There are untracked files"
 
     #
