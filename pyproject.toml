@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "liveimport"
-version = "0.9.4"
+version = "0.9.5dev1"
 description = "Automatically reload modified Python modules in notebooks and scripts."
 readme = "README.md"
 authors = [{ name = "Edward Screven" }]

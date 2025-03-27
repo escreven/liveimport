@@ -112,14 +112,14 @@ function require_good_build {
         || fail "Version $version not built"
 
     #
-    # We don't need to worry about ls dist/*.whl failing because we knwow there
+    # We don't need to worry about ls dist/*.whl failing because we know there
     # is at least one .whl file there.
     #
 
     local count
     count=$(ls dist/*.whl 2>/dev/null | wc -l)
 
-	[[ $count -eq 1 ]] || fail "Expected one built version; found" "$count"
+    [[ $count -eq 1 ]] || fail "Expected one built version; found" "$count"
 
     local version=$1
     $PYTHON -m twine check \
@@ -319,6 +319,7 @@ usage() {
     echo "    report-coverage     Measure and report test coverage"
     echo "    build-doc           Build the documentation"
     echo "    build-dist          Build wheel and sdist files in dist/"
+    echo "    check-version       Verify and print consistent project version"
     echo "    check-dist          Verify the distribution files"
     echo "    check-clean-main    Verify local repo is on clean main branch"
     echo "    declare-release     Tag current clean main branch as a release"
@@ -375,6 +376,10 @@ function act {
             ;;
         build-dist)
             build_dist
+            ;;
+        check-version)
+            version=$(require_consistent_version)
+            echo "Consistent version is \"$version\"."
             ;;
         check-dist)
             check_dist
