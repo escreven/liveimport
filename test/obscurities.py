@@ -47,7 +47,7 @@ def test_import_description():
     assert(str(_Import("foo",None,None)) == "import foo")
     assert(str(_Import("foo","bar",None)) == "import foo as bar")
     assert(str(_Import("foo",None,"*")) == "from foo import *")
-    assert(str(_Import("foo",None,[("x","x"),("y","z")])) == 
+    assert(str(_Import("foo",None,[("x","x"),("y","z")])) ==
            "from foo import x, y as z")
 
 
@@ -94,7 +94,7 @@ def test_disappearing_symbol():
 
 def test_no_spec():
     """
-    register() should raise a ValueError if a module has no spec.    
+    register() should raise a ValueError if a module has no spec.
     """
     #
     # Create a specless module that is apparently imported.
@@ -103,7 +103,7 @@ def test_no_spec():
     exec("def hello(): print('hello')", module.__dict__)
     sys.modules['untethered_no_spec'] = module
     globals()['untethered_no_spec'] = module
-    
+
     try:
         liveimport.register(globals(),"import untethered_no_spec")
         error = None
@@ -114,7 +114,7 @@ def test_no_spec():
 
 def test_no_file():
     """
-    register() should raise a ValueError if a module has no source file.   
+    register() should raise a ValueError if a module has no source file.
     """
     #
     # Create a module with a spec but no source file that is apparently
@@ -126,7 +126,7 @@ def test_no_file():
     exec("def hello(): print('hello')", module.__dict__)
     sys.modules['untethered_no_file'] = module
     globals()['untethered_no_file'] = module
-    
+
     try:
         liveimport.register(globals(),"import untethered_no_file")
         error = None

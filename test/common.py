@@ -258,7 +258,7 @@ import A, B, C, D, E, F, G #type:ignore
 from altpkg import amod1 #type:ignore
 
 #
-# Gven a module name, return its source file.  
+# Gven a module name, return its source file.
 #
 
 def _module_filename(modulename:str) -> str:
@@ -286,7 +286,7 @@ def modify_module(modulename:str, sleep:float=0.05, **kwargs):
 
 def restore_module(modulename:str, sleep:float=0.05):
     filename = _module_filename(modulename)
-    olddef = _MODULE_DEFS[modulename]    
+    olddef = _MODULE_DEFS[modulename]
     with open(filename,'w') as f:
         f.write(_module_src(modulename,**olddef))
     time.sleep(sleep)
@@ -321,7 +321,7 @@ def touch_module(modulename:str, sleep:float=0.05):
 #       tag = get_tag("mod1")
 #       ... do something that should cause mod1 to reload ...
 #       expect_tag(next_tag(tag))
-# 
+#
 # Generated modules include a tag variable.  On first load, the tag is the pair
 # (<modulename>,1).  On a reload after a rewrite or touch, because tag already
 # exists in the loaded module, the tag becomes (<modulename>,<prior>+1).  That
@@ -385,11 +385,11 @@ def keep_tempdir():
 #
 
 def _pkg_version(name:str):
-    return (importlib.metadata.version(name) 
+    return (importlib.metadata.version(name)
             if importlib.util.find_spec(name) else None)
 
 def describe_environment() -> dict[str,str|None]:
-        
+
     env_prompt = os.environ.get('VIRTUAL_ENV_PROMPT',None)
     ipython_version = _pkg_version("IPython")
     notebook_version = _pkg_version("notebook")
@@ -400,14 +400,14 @@ def describe_environment() -> dict[str,str|None]:
 
     print("Global environment" if env_prompt is None else
           f"Virtual environment {env_prompt}")
-    
+
     print("IPython", ipython_version)
 
     if notebook_version is not None:
         print("Notebook", notebook_version)
     else:
         print("Notebook not installed")
-    
+
     print("LiveImport", liveimport.__version__)
 
     if _KEEP_TEMPDIR:
