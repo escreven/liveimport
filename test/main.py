@@ -51,7 +51,7 @@ def main():
         help="Abort if not running specified Python version (Example: 3.10)")
 
     parser.add_argument("-check-ipython", metavar="VERSION",
-        help="Abort if not using specified IPython version (Example: 7.16.1)")
+        help="Abort if not using specified IPython version (Example: 7.23.1)")
 
     args = parser.parse_args()
 

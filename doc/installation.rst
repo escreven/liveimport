@@ -16,4 +16,4 @@ You can also clone the repo and install it directly.
     $ cd liveimport
     $ pip install .
 
-LiveImport requires Python 3.10 or greater and IPython 7.16.1 or greater.
+LiveImport requires Python 3.10 or greater and IPython 7.23.1 or greater.

@@ -398,6 +398,8 @@ def describe_environment() -> dict[str,str|None]:
 
     print(f"Python {sys.version}")
 
+    print(f"Platform {sys.platform}")
+
     print("Global environment" if env_prompt is None else
           f"Virtual environment {env_prompt}")
 

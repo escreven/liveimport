@@ -1,0 +1,90 @@
+name: LiveImport Test Suite
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  OLDEST_DEPS: 'ipython==7.23.1 notebook==5.7.0 coverage'
+  LATEST_DEPS: 'ipython notebook coverage'
+
+#
+# Because running the full matrix of tests, we test the "canary" configuration
+# first: Python 3.12 on Linux using both the oldest and latest versions of
+# IPython and notebook.  Because of the nature LiveImport, if the canary tests
+# fail, likely many if not all of the remaining tests will fail.
+#
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dependencies: [ 'oldest', 'latest' ]
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip wheel setuptools
+        if [ "${{ matrix.dependencies }}" = "oldest" ]; then
+          pip install $OLDEST_DEPS
+        else
+          pip install $LATEST_DEPS
+        fi
+        pip install -e .
+
+    - name: Run Tests
+      run: |
+        coverage run \
+            --data-file .coverage.main \
+            --include 'src/liveimport.py,test/*.py' test/main.py
+        coverage combine
+        coverage report --include=src/liveimport.py --fail-under=100
+
+  full:
+    needs: canary
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+        dependencies: [ 'oldest', 'latest' ]
+      fail-fast: false
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip wheel setuptools
+        if [ "${{ matrix.dependencies }}" = "oldest" ]; then
+          pip install $OLDEST_DEPS
+        else
+          pip install $LATEST_DEPS
+        fi
+        pip install -e .
+      shell: bash
+
+    - name: Run Tests
+      run: |
+        coverage run \
+            --data-file .coverage.main \
+            --include 'src/liveimport.py,test/*.py' test/main.py
+        coverage combine
+        coverage report --include=src/liveimport.py --fail-under=100
+      shell: bash
