@@ -15,7 +15,7 @@ release = __version__
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
-    'sphinx_rtd_theme',    
+    'sphinx_rtd_theme',
 ]
 
 # No templates or static elements for now.

@@ -37,22 +37,22 @@ def main():
 
     parser = ArgumentParser(
         description="Test LiveImport")
-    
+
     parser.add_argument("pattern", nargs='?', default=None,
         help="Only run tests containing this regex")
-    
+
     parser.add_argument("-keeptemp", action="store_true",
         help="Keep the temporary directory created for testing")
-    
+
     parser.add_argument("-reverse", action="store_true",
-        help="Run tests im reverse order")
-    
+        help="Run tests in reverse order")
+
     parser.add_argument("-check-python", metavar="VERSION",
         help="Abort if not running specified Python version (Example: 3.10)")
-    
+
     parser.add_argument("-check-ipython", metavar="VERSION",
         help="Abort if not using specified IPython version (Example: 7.16.1)")
-    
+
     args = parser.parse_args()
 
     cases = []
@@ -64,12 +64,12 @@ def main():
     cases.extend(_get_cases(integration))
 
     if (pattern := args.pattern) is not None:
-        cases = [ case for case in cases 
+        cases = [ case for case in cases
                   if re.search(pattern,case[0]) ]
-        
+
     if args.reverse:
         cases = list(reversed(cases))
-        
+
     if args.keeptemp:
         common.keep_tempdir()
 

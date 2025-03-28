@@ -11,8 +11,14 @@ if [[ $(uname -s) == CYGWIN* ]]; then
     CYGWIN=1
 else
     PYTHON=python3
-    unset CYGWIN
+    CYGWIN=
 fi
+
+#
+# The name of the LiveImport public remote.
+#
+
+PUBLIC=public
 
 #
 # Report fatal error to stderr and exit.
@@ -112,14 +118,14 @@ function require_good_build {
         || fail "Version $version not built"
 
     #
-    # We don't need to worry about ls dist/*.whl failing because we knwow there
+    # We don't need to worry about ls dist/*.whl failing because we know there
     # is at least one .whl file there.
     #
 
     local count
     count=$(ls dist/*.whl 2>/dev/null | wc -l)
 
-	[[ $count -eq 1 ]] || fail "Expected one built version; found" "$count"
+    [[ $count -eq 1 ]] || fail "Expected one built version; found" "$count"
 
     local version=$1
     $PYTHON -m twine check \
@@ -130,8 +136,8 @@ function require_good_build {
 
 #
 #  Succeed iff the local repo is on branch main with a clean tree synchronized
-#  with the given branch or tag (which should be either remotes/origin/main or
-#  the release tag).
+#  with the given branch or tag (which should be either $PUBLIC/main or the
+#  release tag).
 #
 
 function require_git_clean {
@@ -147,8 +153,8 @@ function require_git_clean {
 
     git diff --cached --quiet || fail "There are uncommitted changes"
 
-    [[ -z "$(git ls-files --others --exclude-standard)" ]] \
-        || fail "There are untracked files"
+    git status --porcelain | grep -q '^??' \
+        && fail "There are untracked files"
 
     #
     # Using "rev-list -1" on the right because rev-parse of an annotated tag is
@@ -180,14 +186,16 @@ function report_coverage {
     $PYTHON -m coverage html
 
     local path
-    path=$(realpath -e htmlcov/index.html) || \
-        fail "Can't find generated HTML report"
+    path=$(realpath htmlcov/index.html)
+    [[ -f $path ]] || fail "Can't find generated HTML report"
 
     if [[ $CYGWIN ]]; then
-        path=$(cygpath -w "$path")
+        path=$(cygpath -m "$path")
     fi
 
-    echo "Path to HTML report follows."
+    path="file://$path"
+
+    echo "File URI to HTML report follows."
     echo "$path"
 }
 
@@ -261,11 +269,11 @@ function declare_release {
     require_releasable_version "$version"
     require_not_released "$version"
     require_good_build "$version"
-    require_git_clean remotes/origin/main
+    require_git_clean $PUBLIC/main
 
     tag="v$version"
     git tag -a "$tag" -m "Release $version"
-    git push origin "$tag"
+    git push $PUBLIC "$tag"
 }
 
 #
@@ -317,6 +325,7 @@ usage() {
     echo "    report-coverage     Measure and report test coverage"
     echo "    build-doc           Build the documentation"
     echo "    build-dist          Build wheel and sdist files in dist/"
+    echo "    check-version       Verify and print consistent project version"
     echo "    check-dist          Verify the distribution files"
     echo "    check-clean-main    Verify local repo is on clean main branch"
     echo "    declare-release     Tag current clean main branch as a release"
@@ -374,11 +383,15 @@ function act {
         build-dist)
             build_dist
             ;;
+        check-version)
+            version=$(require_consistent_version)
+            echo "Consistent version is \"$version\"."
+            ;;
         check-dist)
             check_dist
             ;;
         check-clean-main)
-            require_git_clean remotes/origin/main
+            require_git_clean $PUBLIC/main
             ;;
         declare-release)
             declare_release

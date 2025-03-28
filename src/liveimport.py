@@ -13,7 +13,7 @@ notebook, you might write
 
       import liveimport
       import numpy as np
-      import matplotlib.plot as plot
+      import matplotlib.pyplot as plot
 
       import symcode
       from printmath import print_math, print_equations as print_eq
@@ -26,8 +26,8 @@ notebook, you might write
       \"\"\", clear=True)
 
 Then, whenever you run cells, LiveImport will reload any of ``symcode``,
-``printmath``, and ``simulator`` that have changed since they were registered
-or last reloaded.  LiveImport deems a module changed when its source file
+``printmath``, and ``simulator`` that have changed since registration or their
+last reload.  LiveImport deems a module changed when its source file
 modification time changes.
 
 LiveImport also updates imported module symbols.  For example, if you modify
@@ -79,7 +79,7 @@ A complete cell magic example equivalent to the first begins with cell
 
       import liveimport
       import numpy as np
-      import matplotlib.plot as plot
+      import matplotlib.pyplot as plot
       liveimport.hidden_cell_magic(enabled=True)
 
 which is followed by cell
@@ -128,7 +128,7 @@ instead.
    statement in Python source that is not nested within another Python
    construct such as an ``if`` or ``try`` statement.
 """
-__version__ = "0.9.4"
+__version__ = "0.9.5dev1"
 
 import math
 import re
@@ -366,7 +366,7 @@ class _ModuleInfo:
         assert (parent := spec.parent) is not None
 
         self.module      = module         # loaded module instance
-        self.file        = file           # source file name 
+        self.file        = file           # source file name
         self.parent      = parent         # parent package or ''
         self.mtime       = getmtime(file) # last known modification time
         self.projections = dict()         # projections keyed by namespace id
@@ -591,8 +591,8 @@ def register(namespace:dict[str,Any], importstmts:str,
     with the value of ``stop`` in ``simulator``.
 
     Using multiline strings to specify multiple import statements, each on its
-    own line as shown above is convenient and easy to read, but in any case
-    statements must have identical indentation.
+    own line as shown above is convenient and easy to read, but statements must
+    have identical indentation.
 
       .. code:: python
 
@@ -624,8 +624,8 @@ def register(namespace:dict[str,Any], importstmts:str,
       .. code:: python
 
         liveimport.register(globals(),"from symcode import x, hermite_poly")
-        liveimport.register(globals(),"from sycmode import x, lagrange_poly")
-        liveimport.register(globals(),"from sycmode import lagrange_poly as lp")
+        liveimport.register(globals(),"from symcode import x, lagrange_poly")
+        liveimport.register(globals(),"from symcode import lagrange_poly as lp")
         liveimport.register(globals(),"from symcode import *")
         liveimport.register(globals(),"import symcode")
 
@@ -633,7 +633,7 @@ def register(namespace:dict[str,Any], importstmts:str,
 
     :raises SyntaxError: `importstmts` is not syntactically valid.
 
-    :raises ImportError: `importstmts` includes an improper relative import
+    :raises ImportError: `importstmts` includes an improper relative import.
 
     :raises ValueError: `importstmts` includes non-import statements, a
         referenced module is not loaded or has no associated source file, or an
@@ -681,22 +681,22 @@ class ReloadEvent:
     .. attribute:: reason
         :type: str
 
-        The reason the module was reloaded, either ``"modified"`` or
+        The reason LiveImport reloaded `module`, either ``"modified"`` or
         ``"dependent"``.
 
     .. attribute:: mtime
         :type: float
 
         The modification time of the module source file last seen by
-        LiveImport.  If reason is ``"modified"``, this time changed since the
-        module was registered or last reloaded.
+        LiveImport.  If reason is ``"modified"``, this time changed since
+        LiveImport began tracking or last reloaded `module`.
 
     .. attribute:: after
         :type: list[str]
 
-        The modules on which `module` depends which reloaded as part of the
-        same sync.  If `reason` is ``"dependent"``, `module` reloaded solely
-        because these modules reloaded.
+        Modules on which `module` depends which LiveImport has already reloaded
+        as part of the same sync.  If `reason` is ``"dependent"``, LiveImport
+        reloaded `module` solely because it reloaded these modules.
 
     The string representation of a `ReloadEvent`:class: is an English-language
     description similar to
@@ -791,8 +791,8 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
     on" partial order, so if A depends on B, then B will reload before A.
 
     `sync()`:func: uses source file modification times to determine if a module
-    has changed — any change triggers a reload, even becoming older than the
-    currently loaded version.  (So reverted modules reload.)
+    has changed.  Any change triggers a reload, including being reset to an
+    older time.  (So reverted modules reload.)
 
     :param observer: If given, `sync()`:func: calls `observer` with a
       `ReloadEvent`:class: describing each successful reload.
@@ -891,13 +891,13 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
         info.mtime = info.next_mtime
 
 
-def auto_sync(*, enabled:bool|None=None, 
-              grace:float|None=None, 
+def auto_sync(*, enabled:bool|None=None,
+              grace:float|None=None,
               report:bool|None=None) -> None:
     """
     Configure automatic sync behavior.  By default, automatic syncing is
     enabled with a grace period of 1.0 seconds and reloads are reported.
-    
+
     :param enabled: LiveImport syncs whenever a notebook cell runs if and only
         if `enabled` is true and a grace period since the end of the last cell
         execution has expired.
