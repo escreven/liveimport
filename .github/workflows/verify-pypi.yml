@@ -1,0 +1,95 @@
+name: Verify Latest PyPI Distribution
+
+on:
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: 'Repository'
+        required: true
+        default: 'PyPI'
+        type: choice
+        options: [ 'PyPI', 'TestPyPI' ]
+      version:
+        description: 'Expected Version'
+        required: true
+        type: string
+
+env:
+  OLDEST_DEPS: 'ipython==7.23.1 notebook==5.7.0 coverage'
+  LATEST_DEPS: 'ipython notebook coverage'
+
+jobs:
+
+  preamble:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Describe Input
+      run: |
+        echo "Will install liveimport from ${{ inputs.repository }}."
+        echo "Expecting version ${{ inputs.version }}."
+      shell: bash
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Release Tag Must Exist
+      run: |
+        if ! git tag -l | grep -q "v${{ inputs.version }}"; then
+          echo "Version ${{ inputs.version }} not released"
+          exit 1
+        fi
+        echo "Release tag exists"
+      shell: bash
+
+  install_and_test:
+    needs: preamble
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+        dependencies: [ 'oldest', 'latest' ]
+      fail-fast: true
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: refs/tags/v${{ inputs.version }}
+
+    - name: Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip wheel setuptools
+        if [[ "${{ matrix.dependencies }}" == "oldest" ]]; then
+          pip install $OLDEST_DEPS
+        else
+          pip install $LATEST_DEPS
+        fi
+        if [[ "${{ inputs.repository }}" == "PyPI" ]]; then
+          pip install liveimport
+        else
+          pip install -i https://test.pypi.org/simple/ liveimport
+        fi
+      shell: bash
+
+    - name: Check Installed Version
+      run: |
+        installed_version="$(python -c "import importlib.metadata; print(importlib.metadata.version('liveimport'))")"
+        echo "LiveImport installed from ${{ inputs.repository }}" \
+              "is version $installed_version"
+        if [[ ! $installed_version == "${{ inputs.version }}" ]]; then
+          echo "Expected ${{ inputs.version }}"
+          exit 1
+        fi
+      shell: bash
+
+    - name: Run Tests
+      run: |
+        python test/main.py
+      shell: bash
