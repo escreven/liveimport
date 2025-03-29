@@ -9,7 +9,7 @@ env:
   LATEST_DEPS: 'ipython notebook coverage'
 
 #
-# Because running the full matrix of tests, we test the "canary" configuration
+# Before running the full matrix of tests, we test the "canary" configuration
 # first: Python 3.12 on Linux using both the oldest and latest versions of
 # IPython and notebook.  Because of the nature LiveImport, if the canary tests
 # fail, likely many if not all of the remaining tests will fail.
