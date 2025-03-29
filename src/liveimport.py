@@ -128,7 +128,7 @@ instead.
    statement in Python source that is not nested within another Python
    construct such as an ``if`` or ``try`` statement.
 """
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 import math
 import re
@@ -910,6 +910,7 @@ def auto_sync(*, enabled:bool|None=None,
     :param report: Use Markdown console blocks to report when modules are
         reloaded by automatic syncing.
     """
+    if _IPYTHON_SHELL is None: return
     if enabled is not None: _HANDLER.autosync_enabled = enabled
     if grace   is not None: _HANDLER.autosync_grace   = grace
     if report  is not None: _HANDLER.autosync_report  = report

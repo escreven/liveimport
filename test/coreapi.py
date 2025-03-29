@@ -519,3 +519,75 @@ def test_implicit_package_register():
     liveimport.register(globals(),"from pkg import smod3")
     assert is_registered("pkg")
     assert is_registered("pkg.smod3")
+
+
+def test_auto_sync_outside_nb():
+    """
+    Calling ``auto_sync`` outside a notebook should be a no-op.
+    """
+    liveimport.auto_sync(enabled=False, grace=3.1, report=False)
+
+
+def test_hidden_cell_magic_outside_nb():
+    """
+    Calling ``hidden_cell_magic`` outside a notebook should be a no-op.
+    """
+    liveimport.hidden_cell_magic(enabled=True)
+
+
+def test_two_namespaces():
+    """
+    Simultaneous registrations in two namespaces should work and not interfere
+    with each other on reload.
+    """
+    #
+    # Fake namespaces for imports we will register.
+    #
+    ns1 = { 'mod1': mod1,
+            'mod2_public1': mod2_public1,
+            'mod2_public2_alias': mod2_public2_alias }
+
+    ns2 = { 'mod1': mod1,
+            'mod2_public1': mod2_public1,
+            'mod3_public1': mod3_public1 }  #type: ignore
+
+    liveimport.register(ns1,"""
+    import mod1
+    from mod2 import mod2_public1, mod2_public2 as mod2_public2_alias
+    """)
+
+    liveimport.register(ns2,"""
+    import mod1
+    from mod2 import mod2_public1
+    from mod3 import mod3_public1
+    """)
+
+    mod1_tag = get_tag("mod1")
+    mod2_tag = get_tag("mod2")
+    mod3_tag = get_tag("mod3")
+
+    touch_module("mod1")
+    touch_module("mod2")
+    touch_module("mod3")
+
+    liveimport.sync()
+
+    expect_tag("mod1",next_tag(mod1_tag))
+    expect_tag("mod2",next_tag(mod2_tag))
+    expect_tag("mod3",next_tag(mod3_tag))
+
+    # No global symbols for these
+    mod2 = sys.modules['mod2']
+    mod3 = sys.modules['mod3']
+
+    # Should have changed
+    assert ns1['mod1'] is mod1
+    assert ns1['mod2_public1'] is mod2.mod2_public1
+    assert ns1['mod2_public2_alias'] is mod2.mod2_public2
+    assert ns2['mod1'] is mod1
+    assert ns2['mod2_public1'] is mod2.mod2_public1
+    assert ns2['mod3_public1'] is mod3.mod3_public1
+
+    # Should be no extraneous bindings.
+    assert 'mod3_public1' not in ns1
+    assert 'mod2_public2_alias' not in ns2
