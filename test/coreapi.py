@@ -184,7 +184,7 @@ def test_general_reload():
     mod3 = sys.modules['mod3']
     mod4 = sys.modules['mod4']
 
-    # Should have changed
+    # What should and should not have changed
     assert common.mod2_public1 is not mod2.mod2_public1 #type:ignore
     assert mod2_public1 is mod2.mod2_public1 #type:ignore
     assert mod2_public2_alias is mod2.mod2_public2 #type:ignore

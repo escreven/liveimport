@@ -1,5 +1,12 @@
 name: Verify Latest PyPI Distribution
 
+#
+# There is a lag between uploading to [Test]PyPI and when the distribution
+# becomes visible to pip running in a GitHub VM.  To avoid wasting time, we
+# install LiveImport and check the version first before installing
+# dependencies.
+#
+
 on:
   workflow_dispatch:
     inputs:
@@ -63,29 +70,32 @@ jobs:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
 
-    - name: Install Dependencies
+    - name: Upgrade Pip, Wheel, and Setuptools
       run: |
         python -m pip install --upgrade pip wheel setuptools
-        if [[ "${{ matrix.dependencies }}" == "oldest" ]]; then
-          pip install $OLDEST_DEPS
-        else
-          pip install $LATEST_DEPS
-        fi
-        if [[ "${{ inputs.repository }}" == "PyPI" ]]; then
-          pip install liveimport
-        else
-          pip install -i https://test.pypi.org/simple/ liveimport
-        fi
       shell: bash
 
-    - name: Check Installed Version
+    - name: Install LiveImport and Check Version
       run: |
+        if [[ "${{ inputs.repository }}" == "PyPI" ]]; then
+          pip install --no-deps liveimport
+        else
+          pip install --no-deps -i https://test.pypi.org/simple/ liveimport
         installed_version="$(python -c "import importlib.metadata; print(importlib.metadata.version('liveimport'))")"
         echo "LiveImport installed from ${{ inputs.repository }}" \
               "is version $installed_version"
         if [[ ! $installed_version == "${{ inputs.version }}" ]]; then
           echo "Expected ${{ inputs.version }}"
           exit 1
+        fi
+      shell: bash
+
+    - name: Install Dependencies
+      run: |
+        if [[ "${{ matrix.dependencies }}" == "oldest" ]]; then
+          pip install $OLDEST_DEPS
+        else
+          pip install $LATEST_DEPS
         fi
       shell: bash
 
