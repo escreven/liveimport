@@ -106,7 +106,7 @@ You can install LiveImport from PyPI with
 $ pip install liveimport
 ```
 
-You can also clone the repo and install it directly.
+You can also clone the repository and install it directly.
 
 ```sh
 $ git clone https://github.com/escreven/liveimport.git
@@ -115,6 +115,21 @@ $ pip install .
 ```
 
 LiveImport requires Python 3.10 or greater and IPython 7.23.1 or greater.
+
+## Reliability
+
+LiveImport includes automated tests with 100% code coverage, which are run on
+MacOS, Linux, and Windows with Python 3.10, 3.11, 3.12, and 3.13 using both the
+oldest supported and latest versions of IPython.  Notebook integration features
+are tested using notebook 5.7.0 and notebook latest.  See [the GitHub
+workflow](https://github.com/escreven/liveimport/blob/main/.github/workflows/test.yml)
+for details.
+
+If you have a copy of the source, you can run the tests yourself with
+
+```sh
+$ python test/main.py
+```
 
 ## Questions or Issues
 
