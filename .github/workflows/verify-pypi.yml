@@ -81,6 +81,7 @@ jobs:
           pip install --no-deps liveimport
         else
           pip install --no-deps -i https://test.pypi.org/simple/ liveimport
+        fi
         installed_version="$(python -c "import importlib.metadata; print(importlib.metadata.version('liveimport'))")"
         echo "LiveImport installed from ${{ inputs.repository }}" \
               "is version $installed_version"
@@ -101,5 +102,5 @@ jobs:
 
     - name: Run Tests
       run: |
-        python test/main.py
+        python test/main.py -failstop
       shell: bash
