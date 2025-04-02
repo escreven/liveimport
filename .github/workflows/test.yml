@@ -45,7 +45,7 @@ jobs:
       run: |
         coverage run \
             --data-file .coverage.main \
-            --include 'src/liveimport.py,test/*.py' test/main.py
+            --include 'src/liveimport.py,test/*.py' test/main.py -failstop
         coverage combine
         coverage report --include=src/liveimport.py --fail-under=100
 
@@ -84,7 +84,7 @@ jobs:
       run: |
         coverage run \
             --data-file .coverage.main \
-            --include 'src/liveimport.py,test/*.py' test/main.py
+            --include 'src/liveimport.py,test/*.py' test/main.py -failstop
         coverage combine
         coverage report --include=src/liveimport.py --fail-under=100
       shell: bash

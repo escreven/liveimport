@@ -1,10 +1,11 @@
-#
-# Setup
-#
-
 from argparse import ArgumentParser
-import re
+import traceback
 from types import FunctionType, ModuleType
+import textwrap
+import inspect
+import sys
+import re
+import io
 import liveimport
 import common
 
@@ -33,6 +34,39 @@ def _get_cases(module:ModuleType) -> list[_Case]:
     return result
 
 
+class _CapturedOutput():
+    __slots__ = "buffer", "save_stdout", "save_stderr"
+
+    def __init__(self):
+        self.buffer = io.StringIO()
+
+    def __enter__(self):
+        sys.stdout.flush()
+        sys.stderr.flush()
+        self.save_stdout = sys.stdout
+        self.save_stderr = sys.stderr
+        buffer = self.buffer
+        buffer.seek(0)
+        buffer.truncate()
+        sys.stdout = buffer
+        sys.stderr = buffer
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        sys.stdout = self.save_stdout
+        sys.stderr = self.save_stderr
+
+    def value(self):
+        return self.buffer.getvalue()
+
+
+def _test_always_fail():
+    print("I am printed to stdout.")
+    print("I am printed to stderr.",file=sys.stderr)
+    def g(): raise RuntimeError("Intentional failure")
+    def f(): g()
+    f()
+
+
 def main():
 
     parser = ArgumentParser(
@@ -53,9 +87,17 @@ def main():
     parser.add_argument("-check-ipython", metavar="VERSION",
         help="Abort if not using specified IPython version (Example: 7.23.1)")
 
+    parser.add_argument("-failstop", action="store_true",
+        help="Stop immediately on failure")
+
+    parser.add_argument("-forcefail", action="store_true",
+        help="Include a test that always fails")
+
     args = parser.parse_args()
 
-    cases = []
+    cases = [] if not args.forcefail else [
+        ('main:always_fail', _test_always_fail) ]
+
     cases.extend(_get_cases(coreapi))
     cases.extend(_get_cases(relative))
     cases.extend(_get_cases(dependencies))
@@ -86,22 +128,45 @@ def main():
     print()
 
     namewd = 2 + max(len(case[0]) for case in cases)
+    correct = 0
+    captured_output = _CapturedOutput()
+
     for name, fn in cases:
         print("    " + name.ljust(namewd,'.'),end='',flush=True)
         try:
-            fn()
-        except:
+            with captured_output: fn()
+            print("OK")
+            correct += 1
+        except BaseException as failure:
             print("FAILED")
             print()
-            if (docstr := getattr(fn,'__doc__',None)) is not None:
-                print(docstr)
+            if (docstr := inspect.getdoc(fn)):
+                print("Test Description:")
                 print()
-            raise
-        print("OK")
+                print(textwrap.indent(docstr.rstrip(),"    "))
+                print()
+            if (output := captured_output.value()):
+                print("Test Output:")
+                print()
+                print(textwrap.indent(output.rstrip(),"    "))
+                print()
+            print("Test Exception:")
+            print()
+            print(f"    {repr(failure)}")
+            print()
+            for frame in traceback.format_tb(failure.__traceback__)[1:]:
+                print(textwrap.indent(frame.rstrip(),"    "))
+            print()
+            if args.failstop:
+                sys.exit(1)
         liveimport.register(globals(),"",clear=True)
 
     print()
-    print("All tests succeeded")
+    print(f"{correct} out of {len(cases)} tests succeeded")
+    print()
+
+    if correct < len(cases):
+        sys.exit(1)
 
 
 if __name__ == '__main__':
