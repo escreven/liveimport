@@ -12,18 +12,18 @@ import coverage
 
 #
 # This module tests LiveImport's notebook integration.  It runs the cells of
-# notebook.ipynb which be in the same directory as this and the other test
+# notebook.ipynb which must be in the same directory as this and the other test
 # modules, including common.py.
 #
-# Function uses this module's __file__ attribute (which it must have) to locate
-# the test notebook, and set the notebook's working directory/
+# Function test_notebook uses this module's __file__ attribute (which it must
+# have) to locate the test notebook, and set the notebook's working directory.
 #
 # NOTE: Someday we will use nbclient instead of nbconvert.  But for now, we
 # want to be able to test with older versions of libraries.
 #
 
 if os.name == 'nt':
-    # Python, be better.
+    # NB: set_event_loop_policy() will be deprecated in Python 3.14.
     import asyncio
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
@@ -183,7 +183,7 @@ class _TestbenchPreprocessor(ExecutePreprocessor):
 # We modify the notebook under test in up to three ways after reading it.
 #
 #   1. Remove all output.  The notebook as stored in the repository should have
-#      no output anyway, but just in case.
+#      no output, but we clear it just in case.
 #
 #   2. Append "SCRIPTED_TEST = True" to the setup cell of the notebook.  The
 #      setup cell must be the second cell in the notebook, must be a code cell,

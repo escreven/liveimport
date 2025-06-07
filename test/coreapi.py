@@ -8,8 +8,10 @@ from common import *
 
 
 # globals() access means this can't be defined in setup
-def is_registered(modulename:str, name:str|None=None, asname:str|None=None):
-    return liveimport._is_registered(globals(),modulename,name,asname)
+def is_registered(modulename:str, name:str|None=None, asname:str|None=None,
+                  namespace:dict[str,Any]|None=None):
+    if namespace is None: namespace = globals()
+    return liveimport._is_registered(namespace,modulename,name,asname)
 
 
 def test_empty():
@@ -307,8 +309,7 @@ def test_sync_syntax_error():
     """
     If the underlying module is made syntactically invalid, sync() should throw
     ModuleError with a SyntaxError cause.  The invalid module should remain out
-    of date until the error is fixed.  Because the syntax error is detected
-    during dependency analysis, there should be no reload report.
+    of date until the error is fixed.  There should be no reload report.
     """
     liveimport.register(globals(),"import mod1")
 
@@ -346,7 +347,7 @@ def test_load_exception():
     If a module being reloaded raises an exception, sync() should throw a
     ModuleError with the module's exception as the cause.  The invalid module
     should remain out of date until the error is fixed.  The failure should be
-    reported.
+    reported as an exception, and there should be no reload report.
     """
     liveimport.register(globals(),"import mod1")
 
@@ -485,7 +486,7 @@ def test_package_module_reload():
 
 def test_package_init_registration():
     """
-    Registration of package itself.
+    Registration of a package itself.
     """
     liveimport.register(globals(),"import pkg.subpkg")
     assert is_registered("pkg.subpkg")
@@ -493,7 +494,7 @@ def test_package_init_registration():
 
 def test_package_init_reload():
     """
-    Modifying __init__.py shold cause the package to reload.  Note that we
+    Modifying __init__.py should cause the package to reload.  Note that we
     don't put tags in __init__.py, so we verify with reload events.
     """
     liveimport.register(globals(),"import pkg.subpkg")
@@ -591,3 +592,83 @@ def test_two_namespaces():
     # Should be no extraneous bindings.
     assert 'mod3_public1' not in ns1
     assert 'mod2_public2_alias' not in ns2
+
+
+def test_clear_two_namespaces():
+    """
+    clear=True should clear imports for the specified namespace and only the
+    specified namespace.
+    """
+    #
+    # Fake namespaces for imports we will register.
+    #
+    ns1 = { 'mod1': mod1,
+            'mod2_public1': mod2_public1,
+            'mod2_public2_alias': mod2_public2_alias,
+            'mod4_public1': mod4_public1 }  #type: ignore
+
+    ns1_copy = ns1.copy()
+
+    ns2 = { 'mod2_public1': mod2_public1,
+            'mod3_public1': mod3_public1 }  #type: ignore
+
+    liveimport.register(ns1,"""
+    import mod1
+    from mod2 import mod2_public1, mod2_public2 as mod2_public2_alias
+    from mod4 import mod4_public1
+    """)
+
+    liveimport.register(ns2,"""
+    from mod2 import mod2_public1
+    from mod3 import mod3_public1
+    """)
+
+    assert is_registered('mod1',namespace=ns1)
+    assert is_registered('mod2','mod2_public1',namespace=ns1)
+    assert is_registered('mod2','mod2_public2','mod2_public2_alias',ns1)
+    assert is_registered('mod4',namespace=ns1)
+
+    assert is_registered('mod2','mod2_public1',namespace=ns2)
+    assert is_registered('mod3','mod3_public1',namespace=ns2)
+
+    liveimport.register(ns1,"",clear=True)
+
+    assert not is_registered('mod1',namespace=ns1)
+    assert not is_registered('mod2','mod2_public1',namespace=ns1)
+    assert not is_registered('mod2','mod2_public2','mod2_public2_alias',ns1)
+    assert not is_registered('mod4',namespace=ns1)
+
+    assert is_registered('mod2','mod2_public1',namespace=ns2)
+    assert is_registered('mod3','mod3_public1',namespace=ns2)
+
+    mod1_tag = get_tag("mod1")
+    mod2_tag = get_tag("mod2")
+    mod3_tag = get_tag("mod3")
+    mod4_tag = get_tag("mod4")
+
+    touch_module("mod1")
+    touch_module("mod2")
+    touch_module("mod3")
+    touch_module("mod4")
+
+    liveimport.sync()
+
+    expect_tag("mod1",mod1_tag)
+    expect_tag("mod2",next_tag(mod2_tag))
+    expect_tag("mod3",next_tag(mod3_tag))
+    expect_tag("mod4",mod4_tag)
+
+    # No global symbols for these
+    mod2 = sys.modules['mod2']
+    mod3 = sys.modules['mod3']
+
+    # Should not have changed
+    assert ns1 == ns1_copy
+
+    # Should have changed
+    assert ns2['mod2_public1'] is mod2.mod2_public1
+    assert ns2['mod3_public1'] is mod3.mod3_public1
+
+    liveimport.register(ns2,"",clear=True)
+    assert not is_registered('mod2','mod2_public1',namespace=ns2)
+    assert not is_registered('mod3','mod3_public1',namespace=ns2)
