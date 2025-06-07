@@ -159,7 +159,7 @@ def main():
             print()
             if args.failstop:
                 sys.exit(1)
-        liveimport.register(globals(),"",clear=True)
+        liveimport._clear_all_registrations()
 
     print()
     print(f"{correct} out of {len(cases)} tests succeeded")

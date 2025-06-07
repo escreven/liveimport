@@ -144,8 +144,8 @@ def _create_package(packagename:str):
         f.write("")
 
 #
-# Create the temporary directory and file hierarchy.  Note the call to _setup() from the top level just after the
-# definition of _cleanup().
+# Create the temporary directory and file hierarchy.  Note the call to _setup()
+# from the top level just after the definition of _cleanup().
 #
 
 def _setup():
@@ -236,7 +236,9 @@ def _cleanup():
         safe_rmdir(dir)
 
 #
-# Execute setup, including imports on which the tests will depend.
+# Execute setup, including imports on which the tests will depend.  We need
+# "#type: ignore" the imports because while they test files will exist when the
+# imports execute, static code analyzers don't know that.
 #
 
 _setup()
@@ -258,7 +260,7 @@ import A, B, C, D, E, F, G #type:ignore
 from altpkg import amod1 #type:ignore
 
 #
-# Gven a module name, return its source file.
+# Given a module name, return its source file.
 #
 
 def _module_filename(modulename:str) -> str:
@@ -297,7 +299,7 @@ def restore_module(modulename:str, sleep:float=0.05):
 #       with revised_module("mod2",postscript="not valid python"):
 #           ... make sure bad syntax is handled ...
 #
-# On scope exit, the module is returned to its original content.
+# On scope exit, the module's original content is restored.
 #
 
 @contextmanager

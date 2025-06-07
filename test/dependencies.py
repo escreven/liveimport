@@ -20,11 +20,12 @@ from common import *
 # There is a cycle A->C->E->A.  Because imports from E are registered after
 # those from A and C, arc E->A should be effectively ignored.
 #
-# The only thing we test in this module are which modules are reloaded and
+# The primary thing we test in this module are which modules are reloaded and
 # reload order, as reported through the recorder option of sync().  That is
-# implemented by function test().  Argument touch is whitespace separated list
-# of modules to modify.  Argument expect is whitespace separated list of
-# modules for which reload is expected in the order given.
+# implemented by test functions dynamically created as lambdas calling _test()
+# by _define().  _define() argument touch is whitespace separated list of
+# modules to modify.  Argument expect is whitespace separated list of modules
+# for which reload is expected in the order given.
 #
 
 

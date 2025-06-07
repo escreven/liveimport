@@ -128,7 +128,7 @@ instead.
    statement in Python source that is not nested within another Python
    construct such as an ``if`` or ``try`` statement.
 """
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 
 import math
 import re
@@ -159,7 +159,7 @@ _transform_cell = TransformerManager().transform_cell
 
 #
 # Implement %%liveimport cell magic as described in the module docstring.
-# Note that re-registering magics do not cause accumulation.
+# Note that re-registering magics does not cause accumulation.
 #
 
 @magics_class
@@ -260,7 +260,7 @@ def _unhide_cell_magic(lines:list[str]):
 # list for "from A import ..." statements.
 #
 
-_Bindings = None|Literal["*"]|list[tuple[str,str]]
+_Bindings = None | Literal["*"] | list[tuple[str,str]]
 
 #
 # Each registered import statement is transformed into one or more _Import
@@ -380,7 +380,10 @@ class _ModuleInfo:
     # statements of the given module file. "Possibly" because in the case of
     # "from A import B", we include "A.B".  Often, of course, A.B is not a
     # module -- but that doesn't matter because we only act on an "A.B"
-    # dependency when A.B turns out to be a tracked module.
+    # dependency when A.B turns out to be a tracked module.  Returning possibly
+    # instead of definitely referenced module names is an implementation
+    # necessity: it enables the depedency graph to evolve naturally as imports
+    # are registered and cleared.
     #
 
     def analyze_dependencies(self) -> None:
@@ -499,7 +502,15 @@ def _register_imports(namespace:dict[str,Any], imports:list[_Import],
                       clear:bool):
 
     if clear:
-        _MODULE_TABLE.clear()
+        purge = []
+        nsid = id(namespace)
+        for info in _MODULE_TABLE.values():
+            if nsid in info.projections:
+                del info.projections[nsid]
+                if not info.projections:
+                    purge.append(info.module.__name__)
+        for name in purge:
+            del _MODULE_TABLE[name]
 
     for imp in imports:
 
@@ -544,6 +555,13 @@ def _is_registered(namespace:dict[str,Any], modulename:str,
     if name is None: return True
     if name == '*': return projection.star
     return (name,asname) in projection.aliases
+
+#
+# Clear all registrations (for testing).
+#
+
+def _clear_all_registrations():
+    _MODULE_TABLE.clear()
 
 #
 # ============================ PUBLIC API ============================
@@ -826,7 +844,7 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
         return
 
     #
-    # At least one module needs to be reloaded.  Schedule reloads ordered
+    # At least one module is out of date.  Schedule reloads ordered
     # topologically by module dependency, including reloads of modules that
     # haven't changed but depend on modules that will reload.
     #
