@@ -4,7 +4,7 @@ Automatically reload modified Python modules in notebooks and scripts.
 
 LiveImport eliminates the need to restart a notebook's Python server to
 reimport code under development in external files.  Suppose you are maintaining
-symbolic math code in ``symcode.py``, LaTex formatting utilities in
+symbolic math code in ``symcode.py``, LaTeX formatting utilities in
 ``printmath.py``, and a simulator in ``simulator.py``.  In the first cell of a
 notebook, you might write
 
@@ -12,22 +12,20 @@ notebook, you might write
 import liveimport
 import numpy as np
 import matplotlib.pyplot as plot
-
+```
+and in the second
+```python
+%%liveimport --clear
 import symcode
 from printmath import print_math, print_equations as print_eq
 from simulator import *
-
-liveimport.register(globals(),"""
-import symcode
-from printmath import print_math, print_equations as print_eq
-from simulator import *
-""", clear=True)
 ```
 
-Then, whenever you run cells, LiveImport will reload any of ``symcode``,
-``printmath``, and ``simulator`` that have changed since registration or their
-last reload.  LiveImport deems a module changed when its source file
-modification time changes.
+When the ``%%liveimport`` cell is run, LiveImport executes and registers the
+import statements.  Thereafter, whenever you run cells, LiveImport will reload
+any of ``symcode``, ``printmath``, and ``simulator`` that have changed since
+registration or their last reload.  LiveImport deems a module changed when its
+source file modification time changes.
 
 LiveImport also updates imported module symbols.  For example, if you modify
 ``printmath.py``, LiveImport will reload ``printmath`` and bind ``print_math``
@@ -46,39 +44,24 @@ imports ``symcode``.  Then, if you modify ``symcode.py``, LiveImport reloads
 changed.  If you do modify both, LiveImport takes care to reload ``symcode``
 first.
 
-## Cell Magic
+## Hidden Cell Magic
 
-As an alternative to calling `register()`, LiveImport defines a cell magic
-``%%liveimport`` which both executes the cell content and registers every
-top-level import statement.  So, you could split the example cell above into
-two, making the second
+Unfortunately, Visual Studio Code and possibly other environments do not
+analyze magic cell content, making ``%%liveimport`` use awkward.  However,
+LiveImport includes a workaround: calling `hidden_cell_magic(True)` causes
+``#_%%liveimport`` lines at the beginning of cells to act just like
+``%%liveimport`` when the cell is run, and since ``#_%%liveimport`` is a Python
+comment, Visual Studio Code and other environments do analyze the content.
 
-```python
-%%liveimport --clear
-import symcode
-from printmath import print_math, print_equations as print_eq
-from simulator import *
-```
-
-No `register()` call is required.  Unfortunately, Visual Studio Code and
-possibly other environments do not analyze magic cell content, making
-``%%liveimport`` use awkward.  However, there is a workaround: calling
-`hidden_cell_magic(enabled=True)` causes ``#_%%liveimport`` lines at the
-beginning of cells to act just like ``%%liveimport`` when the cell is run, and
-since ``#_%%liveimport`` is a Python comment, Visual Studio Code and other
-environments do analyze the content.
-
-A complete cell magic example equivalent to the first begins with cell
+A complete hidden cell magic example equivalent to the first begins with cell
 
 ```python
 import liveimport
 import numpy as np
 import matplotlib.pyplot as plot
-liveimport.hidden_cell_magic(enabled=True)
+liveimport.hidden_cell_magic(True)
 ```
-
-which is followed by cell
-
+followed by cell
 ```python
 #_%%liveimport --clear
 import symcode
@@ -86,12 +69,12 @@ from printmath import print_math, print_equations as print_eq
 from simulator import *
 ```
 
-## Outside of Notebooks
+## Programmatic Interface
 
-You can use LiveImport outside of notebooks, but in that case, you must call
-`sync()` to check for out of date imports.  You can also disable automatic
-syncing in a notebook by calling `auto_sync(enabled=False)` and rely on
-explicit syncing instead.
+The LiveImport API includes programmatic registration, explicit syncing, and
+configuration of LiveImport's notification and automatic syncing behavior.  In
+addition to offering fine control within a notebook, the API enables
+applications to use LiveImport outside of notebook environment.
 
 ## Documentation
 
@@ -119,9 +102,9 @@ LiveImport requires Python 3.10 or greater and IPython 7.23.1 or greater.
 ## Reliability
 
 LiveImport includes automated tests with 100% code coverage, which are run on
-MacOS, Linux, and Windows with Python 3.10, 3.11, 3.12, and 3.13 using both the
-oldest supported and latest versions of IPython.  Notebook integration features
-are tested using notebook 5.7.0 and notebook latest.  See [the GitHub
+MacOS, Linux, and Windows with Python 3.10, 3.11, 3.12, 3.13, and 3.14 using
+both the oldest supported and latest versions of IPython.  Notebook integration
+features are tested using notebook 5.7.0 and notebook latest.  See [the GitHub
 workflow](https://github.com/escreven/liveimport/blob/main/.github/workflows/test.yml)
 for details.
 

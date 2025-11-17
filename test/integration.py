@@ -22,12 +22,6 @@ import coverage
 # want to be able to test with older versions of libraries.
 #
 
-if os.name == 'nt':
-    # NB: set_event_loop_policy() will be deprecated in Python 3.14.
-    import asyncio
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-
 #
 # Declarations extracted from the source of one code cell.
 #

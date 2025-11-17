@@ -334,7 +334,7 @@ usage() {
     echo "    clean-coverage      Delete coverage data and reports"
     echo "    clean-doc           Delete documentation"
     echo "    clean-dist          Delete distribution files"
-    echo "    clean               Delete both doc and distribution files"
+    echo "    clean               Delete coverage, doc, and distribution files"
     echo
     echo "The deployment actions require user confirmation."
     echo
