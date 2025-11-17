@@ -53,8 +53,8 @@ Hidden Cell Magic
 
 Unfortunately, Visual Studio Code and possibly other environments do not
 analyze magic cell content, making ``%%liveimport`` use awkward.  However,
-LiveImport includes a workaround: calling `hidden_cell_magic(True)
-<hidden_cell_magic>`:func: causes ``#_%%liveimport`` lines at the beginning of
+LiveImport includes a workaround: calling :func:`hidden_cell_magic(True)
+<hidden_cell_magic>` causes ``#_%%liveimport`` lines at the beginning of
 cells to act just like ``%%liveimport`` when the cell is run, and since
 ``#_%%liveimport`` is a Python comment, Visual Studio Code and other
 environments do analyze the content.
@@ -99,15 +99,15 @@ automatically reloads modules in a notebook, something like
         Reloaded simulator because symcode reloaded
 
 You can disable these reports by calling
-`auto_sync(report=False)<auto_sync>`:func:.
+:func:`auto_sync(report=False)<auto_sync>`.
 
 Programmatic Registration
 -------------------------
 
 As an alternative to ``%%liveimport`` cell magic, you can register import
-statements by calling `register()<register>`:func:.  Unlike ``%%liveimport``
-cell magic, `register()`:func: does not execute the import statements it
-registers, so you must execute them before calling `register()`:func:.  The
+statements by calling :func:`register()<register>`.  Unlike ``%%liveimport``
+cell magic, :func:`register()` does not execute the import statements it
+registers, so you must execute them before calling :func:`register()`.  The
 cell below is equivalent to the previous example.
 
     .. code:: python
@@ -145,18 +145,18 @@ In order to avoid reloading modules between cell executions of a multi-cell run
 (such as when running all cells), LiveImport suppresses module modification
 checks for a grace period after each cell execution. The default grace period
 is one second.  You can change the grace period by calling
-`auto_sync(grace=...) <auto_sync>`:func:.
+:func:`auto_sync(grace=...) <auto_sync>`.
 
 You can also disable automatic syncing altogether by calling
-`auto_sync(enabled=False) <auto_sync>`:func: and rely on explicit syncing
-through calls to `sync()`:func: instead.
+:func:`auto_sync(enabled=False) <auto_sync>` and rely on explicit syncing
+through calls to :func:`sync()` instead.
 
 Outside of Notebooks
 --------------------
 
 You can use LiveImport outside of notebook environments, but in that case, you
 must use programmatic registration and explicitly syncing via
-`register()`:func: and `sync()`:func:.
+:func:`register()` and :func:`sync()`.
 
 .. [#f1] A "top-level import" is any ``import ...`` or ``from ... import ...``
    statement in Python source that is not nested within another Python
@@ -751,7 +751,7 @@ class ReloadEvent:
         as part of the same sync.  If `reason` is ``"dependent"``, LiveImport
         reloaded `module` solely because it reloaded these modules.
 
-    The string representation of a `ReloadEvent`:class: is an English-language
+    The string representation of a :class:`ReloadEvent` is an English-language
     description similar to
 
         ``Reloaded printmath modified 18 seconds ago``
@@ -794,7 +794,7 @@ class ModuleError(Exception):
         :type: BaseException
 
         The issue LiveImport encountered.  This could be a source error, such
-        as a `SyntaxError`:class:, or an exception raised while the module is
+        as a :class:`SyntaxError`, or an exception raised while the module is
         executing during a reload.
     """
     def __init__(self, module:str, phase:str):
@@ -840,21 +840,21 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
     not (meaning there is an import cycle), LiveImport ignores the imports by
     more recently tracked modules that prevent it.
 
-    `sync()`:func: guarantees that reload order is consistent with the "depends
+    :func:`sync()` guarantees that reload order is consistent with the "depends
     on" partial order, so if A depends on B, then B will reload before A.
 
-    `sync()`:func: uses source file modification times to determine if a module
+    :func:`sync()` uses source file modification times to determine if a module
     has changed.  Any change triggers a reload, including being reset to an
     older time.  (So reverted modules reload.)
 
-    :param observer: If given, `sync()`:func: calls `observer` with a
-      `ReloadEvent`:class: describing each successful reload.
+    :param observer: If given, :func:`sync()` calls `observer` with a
+      :class:`ReloadEvent` describing each successful reload.
 
     :raises ModuleError: The content of a tracked module is erronous or raised
         an exception when executed during a reload.
 
     .. note::
-        Unless automatic syncing is disabled, calling `sync()`:func: in a
+        Unless automatic syncing is disabled, calling :func:`sync()` in a
         notebook should not be necessary.
     """
     #
