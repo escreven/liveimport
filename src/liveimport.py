@@ -1,4 +1,5 @@
-"""Automatically reload modified Python modules in notebooks and scripts.
+"""LiveImport automatically reloads modified Python modules in notebooks and
+scripts.
 
 Overview
 --------
@@ -34,10 +35,8 @@ LiveImport also updates imported module symbols.  For example, if you modify
 ``printmath.py``, LiveImport will reload ``printmath`` and bind ``print_math``
 and ``print_eq`` in the global namespace to the new definitions.  Similarly, if
 you update ``simulator.py``, LiveImport will create or update bindings for
-every public symbol in ``simulator`` — that is, every symbol defined in the
-module that does not start with ``_``, unless there is an ``__all__`` property
-defined for the module, in which case it acts on only those symbols, just like
-``from simulator import *``.
+every public symbol in ``simulator`` (where public means in ``__all__`` if
+present, and not starting with ``_`` otherwise.)
 
 Modules referenced by registered import statements are called tracked modules.
 The process of bringing registered imports up to date by reloading tracked
@@ -53,9 +52,9 @@ Hidden Cell Magic
 
 Unfortunately, Visual Studio Code and possibly other environments do not
 analyze magic cell content, making ``%%liveimport`` use awkward.  However,
-LiveImport includes a workaround: calling :func:`hidden_cell_magic(True)
-<hidden_cell_magic>` causes ``#_%%liveimport`` lines at the beginning of
-cells to act just like ``%%liveimport`` when the cell is run, and since
+LiveImport has a solution: calling :func:`hidden_cell_magic(True)
+<hidden_cell_magic>` causes ``#_%%liveimport`` lines at the beginning of cells
+to act just like ``%%liveimport`` when the cell is run, and since
 ``#_%%liveimport`` is a Python comment, Visual Studio Code and other
 environments do analyze the content.
 
@@ -126,7 +125,7 @@ cell below is equivalent to the previous example.
       from simulator import *
       \"\"\", clear=True)
 
-While cell magic is generally more convenient, programmatic registeration might
+While cell magic is generally more convenient, programmatic registration might
 be useful if your notebook conditionally imports modules you wish to
 automatically reload, something like
 
@@ -134,9 +133,11 @@ automatically reload, something like
 
       from packaging.version import Version
 
-      if Version(sympy.__version__) < Version("1.14"):
-          import sympyshim
-          liveimport.register(globals(),"import sympyshim")
+      if Version(sympy.__version__) < Version("1.13"):
+          from sympyshim import groups_count
+          liveimport.register(globals(),"from sympyshim import groups_count")
+      else:
+          from sympy.combinatorics.group_numbers import groups_count
 
 Managing Synchronization
 ------------------------
@@ -162,7 +163,7 @@ must use programmatic registration and explicitly syncing via
    statement in Python source that is not nested within another Python
    construct such as an ``if`` or ``try`` statement.
 """
-__version__ = "1.0.3.dev0"
+__version__ = "1.0.3"
 
 import math
 import re

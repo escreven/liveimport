@@ -30,6 +30,19 @@ function fail {
 }
 
 #
+# Several operations depend on git state.  Bring it up to date.
+#
+
+did_fetch_all=False
+function fetch_all {
+    if [[ $did_fetch_all == False ]]; then
+        git fetch --all --prune --tags \
+            || fail "Could not fetch state from git."
+        did_fetch_all=True
+    fi
+}
+
+#
 # Wheel and sdist filenames given a version.
 #
 
@@ -75,6 +88,7 @@ function require_consistent_version {
 
 function require_not_released {
     local version=$1
+    fetch_all
     if git tag -l | grep -q "v${version}"; then
         fail "Source version $version already released"
     fi
@@ -86,6 +100,7 @@ function require_not_released {
 
 function require_released {
     local version=$1
+    fetch_all
     git tag -l | grep -q "v${version}" \
         || fail "Source version $version not released"
 }
@@ -142,6 +157,8 @@ function require_good_build {
 
 function require_git_clean {
     local branch_or_tag=$1
+
+    fetch_all
 
     local current_branch
     current_branch="$(git rev-parse --abbrev-ref HEAD)"
@@ -259,6 +276,8 @@ function declare_release {
     read -p ">>>> Enter release version number: " version
     echo
 
+    fetch_all
+
     local found_version
     found_version=$(require_consistent_version)
 
@@ -355,14 +374,6 @@ cd "$(dirname "$BASH_SOURCE")"
 
 grep -qE 'name\s*=\s*"liveimport"' pyproject.toml \
     || fail "Project name is not liveimport."
-
-
-#
-# Several operations depend on git state.  Bring it up to date.
-#
-
-git fetch --all --prune --tags \
-    || fail "Could not fetch state from git."
 
 #
 # Dispatch

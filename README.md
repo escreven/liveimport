@@ -1,85 +1,53 @@
-Automatically reload modified Python modules in notebooks and scripts.
-
 ## Overview
 
-LiveImport eliminates the need to restart a notebook's Python server to
-reimport code under development in external files.  Suppose you are maintaining
-symbolic math code in ``symcode.py``, LaTeX formatting utilities in
-``printmath.py``, and a simulator in ``simulator.py``.  In the first cell of a
-notebook, you might write
+LiveImport reliably and automatically reloads Python modules in Jupyter
+notebooks.  Unlike IPython's autoreload extension, LiveImport reloads are
+well-defined, deterministic operations that follow the semantics of a
+developer's import statements exactly.  It maintains consistency between
+modules by automatically reloading dependent modules as needed, ensuring
+up-to-date references across a notebook and its modules.
+
+LiveImport is designed for developers who interactively build Jupyter notebooks
+together with external Python code, and who want predictable reloading with
+minimal mystery.
+
+Given a cell like
 
 ```python
-import liveimport
-import numpy as np
-import matplotlib.pyplot as plot
-```
-and in the second
-```python
-%%liveimport --clear
-import symcode
-from printmath import print_math, print_equations as print_eq
-from simulator import *
+%%liveimport
+from common import *
+from nets import ConvNet, ResidualNet as ResNet
+import hyperparam as hp
 ```
 
-When the ``%%liveimport`` cell is run, LiveImport executes and registers the
-import statements.  Thereafter, whenever you run cells, LiveImport will reload
-any of ``symcode``, ``printmath``, and ``simulator`` that have changed since
-registration or their last reload.  LiveImport deems a module changed when its
-source file modification time changes.
+LiveImport will execute the import statements, then automatically reload
+``common``, ``nets``, or ``hyperparam`` whenever their source files change.
+When LiveImport reloads, it will rebind symbols in the notebook as described by
+the import statements.  If ``nets`` imports from ``hyperparam``, then when
+``hyperparam`` is modified, LiveImport will automatically reload ``nets`` after
+``hyperparam``.
 
-LiveImport also updates imported module symbols.  For example, if you modify
-``printmath.py``, LiveImport will reload ``printmath`` and bind ``print_math``
-and ``print_eq`` in the global namespace to the new definitions.  Similarly, if
-you update ``simulator.py``, LiveImport will create or update bindings for
-every public symbol in ``simulator`` — that is, every symbol defined in the
-module that does not start with ``_``, unless there is an ``__all__`` property
-defined for the module, in which case it acts on only those symbols, just like
-``from simulator import *``.
-
-Modules referenced by registered import statements are called tracked modules.
-LiveImport analyzes top-level import dependencies between tracked modules to
-ensure reloading is consistent with those dependencies.  Suppose ``simulator``
-imports ``symcode``.  Then, if you modify ``symcode.py``, LiveImport reloads
-``simulator`` after it reloads ``symcode`` even if ``simulator.py`` has not
-changed.  If you do modify both, LiveImport takes care to reload ``symcode``
-first.
-
-## Hidden Cell Magic
-
-Unfortunately, Visual Studio Code and possibly other environments do not
-analyze magic cell content, making ``%%liveimport`` use awkward.  However,
-LiveImport includes a workaround: calling `hidden_cell_magic(True)` causes
-``#_%%liveimport`` lines at the beginning of cells to act just like
-``%%liveimport`` when the cell is run, and since ``#_%%liveimport`` is a Python
-comment, Visual Studio Code and other environments do analyze the content.
-
-A complete hidden cell magic example equivalent to the first begins with cell
+To make the cell above transparent to IDEs like Visual Studio Code, you can
+hide the cell magic:
 
 ```python
-import liveimport
-import numpy as np
-import matplotlib.pyplot as plot
-liveimport.hidden_cell_magic(True)
-```
-followed by cell
-```python
-#_%%liveimport --clear
-import symcode
-from printmath import print_math, print_equations as print_eq
-from simulator import *
+#_%%liveimport
+from common import *
+from nets import ConvNet, ResidualNet as ResNet
+import hyperparam as hp
 ```
 
-## Programmatic Interface
+Hidden cell magic is a user experience feature tailored for modern notebook
+development.  Others include protection against reloading in the middle of
+multi-cell runs and optional reload notification.
 
-The LiveImport API includes programmatic registration, explicit syncing, and
-configuration of LiveImport's notification and automatic syncing behavior.  In
-addition to offering fine control within a notebook, the API enables
-applications to use LiveImport outside of notebook environment.
+If you currently use autoreload, you might consider [comparing LiveImport
+to autoreload](comparison/Comparison.md).
 
 ## Documentation
 
-For more details including an API reference see
-[liveimport.readthedocs.io](https://liveimport.readthedocs.io).
+See [liveimport.readthedocs.io](https://liveimport.readthedocs.io) for a user
+guide and an API reference.
 
 ## Installation
 

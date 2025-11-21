@@ -2,10 +2,10 @@
 Tips
 ----
 
-While LiveImport does not require executed and registered import statements to
-be identical, the results of reloading may be surprising if they are not.
-Since the ``%%liveimport`` cell magic both executes and registers import
-statements, it naturally ensures that identity.
+While the LiveImport API does not require executed and registered import
+statements to be strictly identical, the results of reloading may be surprising
+if they are not.  Since the ``%%liveimport`` cell magic both executes and
+registers import statements, it naturally ensures that identity.
 
 If you choose to use `register()`:func: in a notebook instead of relying on
 cell magic or you are using LiveImport outside a notbook, the recommended
