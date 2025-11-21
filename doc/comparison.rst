@@ -75,8 +75,7 @@ silent.
 Explore
 ~~~~~~~
 
-The `comparison <https://github.com/escreven/liveimport/comparison>`_ directory
-of LiveImport's GitHub repository contains small notebooks and modules along
-with a `step-by-step guide
-<https://github.com/escreven/liveimport/step-by-step.html>`_ if you would like
-to investigate these differences yourself.
+The `comparison <https://github.com/escreven/liveimport/tree/main/comparison>`_
+directory of LiveImport's GitHub repository contains small notebooks and
+modules along with a step-by-step README if you would like to investigate these
+differences yourself.
