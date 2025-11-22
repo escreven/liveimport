@@ -28,11 +28,13 @@ If your notebook includes the import
 LiveImport will rebind ``baseline_color``, ``lrc`` and ``plot_training`` and
 nothing else when it reloads ``netplot``.  If ``plot_training`` is a function
 and the colors are values (perhaps strings), autoreload patches
-``plot_training``, does not rebind ``baseline_color`` in its explicit mode,
-and never rebinds ``lrc`` in any mode.  Moreover, if both ``netplot`` and your
-notebook define ``trace_mode`` variables, autoreload will overwrite your
-notebook's ``trace_mode`` variable when it reloads ``netplot`` in complete
-mode.
+``plot_training``, does not rebind ``baseline_color`` in its explicit mode, and
+never rebinds ``lrc`` in any mode.
+
+Moreover, if both ``netplot`` and your notebook define ``trace_mode``
+variables, autoreload in complete mode will overwrite your notebook's
+``trace_mode`` variable when it reloads ``netplot``, even though you haven't
+imported ``trace_mode`` from ``netplot``.
 
 Autoreload's approach can also lead to stale references between modules.  For
 example, if ``orchestrate.py`` imports from ``netplot`` in the same way as
@@ -42,7 +44,7 @@ in order to update ``orchestrate``'s references to ``netplot``.
 
 One advantage of autoreload's patching approach is that an existing class
 instance immediately reflects changes made to its methods.  While that can be
-useful, it is hard to always get right as a user, since new versions of methods
+useful, it's hard to always get right as a user, since new versions of methods
 must be made to work correctly with existing instance state.  LiveImport
 doesn't patch; existing instances keep their old method definitions.
 

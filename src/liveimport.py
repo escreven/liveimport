@@ -1,169 +1,9 @@
-"""LiveImport automatically reloads modified Python modules in notebooks and
-scripts.
+"""Automatically reload modified Python modules in notebooks and scripts.
 
-Overview
---------
-
-LiveImport eliminates the need to restart a notebook's Python server to
-reimport code under development in external files.  Suppose you are maintaining
-symbolic math code in ``symcode.py``, LaTeX formatting utilities in
-``printmath.py``, and a simulator in ``simulator.py``.  In the first cell of a
-notebook, you might write
-
-  .. code:: python
-
-      import liveimport
-      import numpy as np
-      import matplotlib.pyplot as plot
-
-and in the second
-
-  .. code:: python
-
-      %%liveimport --clear
-      import symcode
-      from printmath import print_math, print_equations as print_eq
-      from simulator import *
-
-When the ``%%liveimport`` cell is run, LiveImport executes and registers the
-import statements.  Thereafter, whenever you run cells, LiveImport will reload
-any of ``symcode``, ``printmath``, and ``simulator`` that have changed since
-registration or their last reload.  LiveImport deems a module changed when its
-source file modification time changes.
-
-LiveImport also updates imported module symbols.  For example, if you modify
-``printmath.py``, LiveImport will reload ``printmath`` and bind ``print_math``
-and ``print_eq`` in the global namespace to the new definitions.  Similarly, if
-you update ``simulator.py``, LiveImport will create or update bindings for
-every public symbol in ``simulator`` (where public means in ``__all__`` if
-present, and not starting with ``_`` otherwise.)
-
-Modules referenced by registered import statements are called tracked modules.
-The process of bringing registered imports up to date by reloading tracked
-modules and updating symbols is called syncing.
-
-The ``--clear`` option used causes LiveImport to discard all prior import
-registrations when running a ``%%liveimport`` cell.  So, if you wanted to stop
-tracking modifications to ``symcode.py``, you could simply delete ``import
-symcode`` and rerun the containing cell.
-
-Hidden Cell Magic
------------------
-
-Unfortunately, Visual Studio Code and possibly other environments do not
-analyze magic cell content, making ``%%liveimport`` use awkward.  However,
-LiveImport has a solution: calling :func:`hidden_cell_magic(True)
-<hidden_cell_magic>` causes ``#_%%liveimport`` lines at the beginning of cells
-to act just like ``%%liveimport`` when the cell is run, and since
-``#_%%liveimport`` is a Python comment, Visual Studio Code and other
-environments do analyze the content.
-
-A complete hidden cell magic example equivalent to the first begins with cell
-
-  .. code:: python
-
-      import liveimport
-      import numpy as np
-      import matplotlib.pyplot as plot
-      liveimport.hidden_cell_magic(True)
-
-followed by cell
-
-  .. code:: python
-
-      #_%%liveimport --clear
-      import symcode
-      from printmath import print_math, print_equations as print_eq
-      from simulator import *
-
-Dependency Analysis
--------------------
-
-LiveImport analyzes top-level [#f1]_ import dependencies between tracked
-modules to ensure reloading is consistent with those dependencies.  Suppose
-``simulator`` imports ``symcode``.  Then, if you modify ``symcode.py``,
-LiveImport reloads ``simulator`` after it reloads ``symcode`` even if
-``simulator.py`` has not changed.  If you do modify both, LiveImport takes care
-to reload ``symcode`` first.
-
-Reload Reports
---------------
-
-By default, LiveImport displays Markdown console blocks to report when it
-automatically reloads modules in a notebook, something like
-
-    .. code:: console
-
-        Reloaded symcode modified 18 seconds ago
-        Reloaded simulator because symcode reloaded
-
-You can disable these reports by calling
-:func:`auto_sync(report=False)<auto_sync>`.
-
-Programmatic Registration
--------------------------
-
-As an alternative to ``%%liveimport`` cell magic, you can register import
-statements by calling :func:`register()<register>`.  Unlike ``%%liveimport``
-cell magic, :func:`register()` does not execute the import statements it
-registers, so you must execute them before calling :func:`register()`.  The
-cell below is equivalent to the previous example.
-
-    .. code:: python
-
-      import liveimport
-      import numpy as np
-      import matplotlib.pyplot as plot
-
-      import symcode
-      from printmath import print_math, print_equations as print_eq
-      from simulator import *
-
-      liveimport.register(globals(),\"\"\"
-      import symcode
-      from printmath import print_math, print_equations as print_eq
-      from simulator import *
-      \"\"\", clear=True)
-
-While cell magic is generally more convenient, programmatic registration might
-be useful if your notebook conditionally imports modules you wish to
-automatically reload, something like
-
-    .. code:: python
-
-      from packaging.version import Version
-
-      if Version(sympy.__version__) < Version("1.13"):
-          from sympyshim import groups_count
-          liveimport.register(globals(),"from sympyshim import groups_count")
-      else:
-          from sympy.combinatorics.group_numbers import groups_count
-
-Managing Synchronization
-------------------------
-
-In order to avoid reloading modules between cell executions of a multi-cell run
-(such as when running all cells), LiveImport suppresses module modification
-checks for a grace period after each cell execution. The default grace period
-is one second.  You can change the grace period by calling
-:func:`auto_sync(grace=...) <auto_sync>`.
-
-You can also disable automatic syncing altogether by calling
-:func:`auto_sync(enabled=False) <auto_sync>` and rely on explicit syncing
-through calls to :func:`sync()` instead.
-
-Outside of Notebooks
---------------------
-
-You can use LiveImport outside of notebook environments, but in that case, you
-must use programmatic registration and explicitly syncing via
-:func:`register()` and :func:`sync()`.
-
-.. [#f1] A "top-level import" is any ``import ...`` or ``from ... import ...``
-   statement in Python source that is not nested within another Python
-   construct such as an ``if`` or ``try`` statement.
+See `the user guide
+<https://liveimport.readthedocs.io/en/latest/userguide.html>`_.
 """
-__version__ = "1.0.3"
+__version__ = "1.1.0"
 
 import math
 import re
@@ -217,9 +57,6 @@ class _LiveImportMagics(Magics):
         if shell.run_cell(cell).error_in_exec is None:
             _register_imports(shell.user_ns,imports,clear)
 
-if _IPYTHON_SHELL is not None:
-    _IPYTHON_SHELL.register_magics(_LiveImportMagics)
-
 #
 # Display the given reload events as a Markdown console block.
 #
@@ -264,14 +101,6 @@ class _LiveImportHandler:
     def post_run_cell(self,result):
         self.post_cell_time = time.monotonic()
 
-try:
-    _IPYTHON_SHELL is None or _HANDLER #type:ignore
-except:
-    _HANDLER = _LiveImportHandler()
-    if _IPYTHON_SHELL is not None:
-        _IPYTHON_SHELL.events.register('pre_run_cell',_HANDLER.pre_run_cell)
-        _IPYTHON_SHELL.events.register('post_run_cell',_HANDLER.post_run_cell)
-
 #
 # Input transformer that unhides %%liveimport magic.  It is installed and
 # deinstalled by hidden_cell_magic() as needed.
@@ -285,6 +114,20 @@ def _unhide_cell_magic(lines:list[str]):
             return [ lines[i] if i > 0 else line[2:]
                      for i in range(len(lines)) ]
     return lines
+
+#
+# Register magic, event handlers, and unhiding once at initial load.
+#
+
+if "_did_register" not in globals():
+    _did_register = True
+    if _IPYTHON_SHELL is not None:
+        _IPYTHON_SHELL.register_magics(_LiveImportMagics)
+        _IPYTHON_SHELL.register_magics(_LiveImportMagics)
+        _HANDLER = _LiveImportHandler()
+        _IPYTHON_SHELL.events.register('pre_run_cell',_HANDLER.pre_run_cell)
+        _IPYTHON_SHELL.events.register('post_run_cell',_HANDLER.post_run_cell)
+        _IPYTHON_SHELL.input_transformers_cleanup.append(_unhide_cell_magic)
 
 #
 # =========================== IMPORT MANAGEMENT ===========================
@@ -977,7 +820,7 @@ def hidden_cell_magic(enabled:bool|None=None) -> None:
     :param enabled: Notebook cells that begin with ``#_%%liveimport`` run as if
         they began with ``%%livemagic`` if and only if `enabled` is true.  This
         makes LiveImport cell magic transparent to IDEs like Visual Studio
-        Code, yet still function as desired.  Hidden cell magic is disabled by
+        Code, yet still function as desired.  Hidden cell magic is enabled by
         default.
     """
     if _IPYTHON_SHELL is None: return
