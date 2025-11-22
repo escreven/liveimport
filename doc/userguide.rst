@@ -1,3 +1,5 @@
+.. currentmodule:: liveimport
+
 User Guide
 ==========
 
@@ -70,6 +72,8 @@ To use hidden cell magic with the example above, replace the second cell with
 
 If you prefer, you can disable hidden cell magic by calling
 :func:`hidden_cell_magic(enabled=False) <hidden_cell_magic>`.
+
+.. _dependency_analysis:
 
 Dependency Analysis
 -------------------

@@ -1,3 +1,5 @@
+.. currentmodule:: liveimport
+
 LiveImport
 ==========
 

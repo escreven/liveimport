@@ -1,3 +1,4 @@
+.. currentmodule:: liveimport
 
 Installation
 ------------
