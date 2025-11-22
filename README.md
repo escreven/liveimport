@@ -42,7 +42,7 @@ development.  Others include protection against reloading in the middle of
 multi-cell runs and optional reload notification.
 
 If you currently use autoreload, you might consider [comparing LiveImport
-to autoreload](comparison/Comparison.md).
+to autoreload](https://github.com/escreven/liveimport/blob/main/comparison/Comparison.md).
 
 ## Documentation
 

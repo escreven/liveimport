@@ -138,8 +138,8 @@ have to do that: LiveImport supports every legal Python import statement,
 including relative imports.
 
 Let's test the autoreload workaround.  Increment `gamma_tag` in `gamma.py`.
-That will also update a variable `gamma_second` in `gamma.py`.  Recall the
-relevant import statement
+That will also update a variable `gamma_second` in `gamma.py`.  The
+relevant import statement is
 
 ```python
 from gamma import gamma_tag, gamma_second as gs, gamma_fn, Gamma

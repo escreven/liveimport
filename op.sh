@@ -184,6 +184,15 @@ function require_git_clean {
 }
 
 #
+# Require the top-level README.md to be in a deployable state.  For now that
+# just means only absolute links.
+#
+
+function require_deployable_README {
+    $PYTHON README-check.py || fail "README.md is not deployable"
+}
+
+#
 # Run tests with coverage measurement and report the results.
 #
 
@@ -289,6 +298,7 @@ function declare_release {
     require_not_released "$version"
     require_good_build "$version"
     require_git_clean $PUBLIC/main
+    require_deployable_README
 
     tag="v$version"
     git tag -a "$tag" -m "Release $version"
@@ -316,6 +326,7 @@ upload_dist() {
     require_good_build "$version"
     require_released "$version"
     require_git_clean "v$version"
+    require_deployable_README
 
     local confirm
     echo
@@ -347,6 +358,7 @@ usage() {
     echo "    check-version       Verify and print consistent project version"
     echo "    check-dist          Verify the distribution files"
     echo "    check-clean-main    Verify local repo is on clean main branch"
+    echo "    check-README        Verify README.md is deployable"
     echo "    declare-release     Tag current clean main branch as a release"
     echo "    deploy-to-testpypi  Upload distribution files to TestPyPI"
     echo "    deploy-to-pypi      Upload distribution files to PyPI"
@@ -403,6 +415,9 @@ function act {
             ;;
         check-clean-main)
             require_git_clean $PUBLIC/main
+            ;;
+        check-README)
+            require_deployable_README
             ;;
         declare-release)
             declare_release
