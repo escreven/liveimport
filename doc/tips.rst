@@ -73,9 +73,8 @@ When you run this third cell without also running the "Build the network" cell,
 ``models`` and ``hyperparam`` will reload if they have changed, but ``hp`` and
 ``net`` will not be updated.  That may be what you wish; notebook users are
 generally used to managing state in a notebook explicitly.  But if you would
-like LiveImport to manage that reconstruction for you, put the "Build the
-network" cell content in a separate file, perhaps ``managed_state.py`` with the
-content
+like LiveImport to manage that reconstruction for you, move the "Build the
+network" cell code to a Python file, perhaps ``managed_state.py`` with content
 
   .. code:: python
 
@@ -84,7 +83,7 @@ content
       hp = hyperparam.HyperParam(blocks=6, label_smoothing=0.05)
       net = PreActResidualNet(hp)
 
-And change your ``%%liveimport`` cell to
+and change your ``%%liveimport`` cell to
 
   .. code:: python
 

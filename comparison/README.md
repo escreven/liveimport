@@ -76,8 +76,8 @@ see the initial tag values in the **Print** section of both notebooks.
 
 #### Step 3:
 
-Increment `alpha_tag` in `alpha.py`. Remember to save!  Rerun the **Print
-Tags** cell in both notebooks.  While the new `alpha_tag` values are now shown
+Increment `alpha_tag` in `alpha.py`. Remember to save!  Rerun the **Print**
+cell in both notebooks.  While the new `alpha_tag` values are now shown
 in the cell output of both notebooks, there are important differences.
 
 First, LiveImport notified you that it reloaded modules, displaying a Markdown
@@ -169,7 +169,7 @@ Notebook constructs Gamma<tag=2; second=1>
 The tag value is correct, but the second value, which should be a copy of the
 tag, is not.  The bracketed output shows the value of `gamma_second` in
 `gamma`'s module dictionary.  The autoreload patching machinery has discarded
-the change to gamma_second.  (However, the change is kept `complete` mode.)
+the change to gamma_second.  (However, the change is kept in `complete` mode.)
 
 #### Step 5:
 
@@ -317,4 +317,5 @@ from `delta`, autoreload overwrote `common_int` and `common_str` in the
 notebook just because they have the same name as variables in `delta`.
 
 LiveImport doesn't make this mistake because it parses the Python import
-statements for the modules it is to manage, and uses those statements to determine which symbols to rebind (and which to leave alone.)
+statements for the modules it is to manage, and uses those statements to
+determine which symbols to rebind (and which to leave alone.)
