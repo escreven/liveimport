@@ -34,6 +34,8 @@ edited ``trace.py``, neither ``trace`` nor ``simulator`` would reload because
 If ``trace`` conflicts with an existing notebook symbol name, use the ``import
 trace as ...`` import form.
 
+.. _managing_state:
+
 Managing State
 ~~~~~~~~~~~~~~
 
@@ -68,12 +70,12 @@ Now suppose you have a third cell:
       orchestrate.train(hp,net)
 
 When you run this third cell without also running the "Build the network" cell,
-``models`` and ``hyperparam`` may reload if they have changed, but ``hp`` and
+``models`` and ``hyperparam`` will reload if they have changed, but ``hp`` and
 ``net`` will not be updated.  That may be what you wish; notebook users are
 generally used to managing state in a notebook explicitly.  But if you would
 like LiveImport to manage that reconstruction for you, put the "Build the
-network" cell content in a separate file, perhaps ``managed_state.py`` with
-the content
+network" cell content in a separate file, perhaps ``managed_state.py`` with the
+content
 
   .. code:: python
 
@@ -94,15 +96,15 @@ And change your ``%%liveimport`` cell to
 
 Then, when you run the "Train the network" cell, LiveImport will reload (if
 needed) ``hyperparam``, ``models``, and ``managed_state`` in that order,
-resulting in up to date ``hp`` and ``net`` references.
+resulting in up-to-date ``hp`` and ``net`` references.
 
 Statements and Registrations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 While the LiveImport API does not require executed and registered import
 statements to be strictly identical, the results of reloading may be surprising
-if they are not.  Since the ``%%liveimport`` cell magic both executes and
-registers import statements, it naturally ensures that identity.
+if they are not.  Since ``%%liveimport`` cell magic both executes and registers
+import statements, it naturally ensures that identity.
 
 If you choose to use :func:`register()` in a notebook instead of relying on
 cell magic or you are using LiveImport outside a notebook, the recommended

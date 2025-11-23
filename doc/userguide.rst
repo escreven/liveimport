@@ -201,9 +201,9 @@ LiveImport only processes top-level imports in Python source.  That affects
 both registration through ``%%liveimport`` cells and module dependency
 tracking.
 
-If it essential for your application, it is possible to use the API to
-implement conditional imports that are registered.  There is an example in the
-next section.
+If it's essential for your application, you can use the API to implement
+conditional imports that are registered.  There is an example in the next
+section.
 
 Programmatic Registration
 -------------------------
@@ -211,8 +211,8 @@ Programmatic Registration
 As an alternative to ``%%liveimport`` cell magic, you can register import
 statements by calling :func:`register()<register>`.  Unlike ``%%liveimport``
 cell magic, :func:`register()` does not execute the import statements it
-registers, so you must execute them before calling :func:`register()`.  The
-cell below is equivalent to the **Overview** example.
+registers, so you must do so before calling :func:`register()`.  The cell below
+is equivalent to the **Overview** example.
 
   .. code:: python
 

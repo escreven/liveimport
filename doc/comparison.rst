@@ -48,7 +48,8 @@ One advantage of autoreload's patching approach is that an existing class
 instance immediately reflects changes made to its methods.  While that can be
 useful, it's hard to always get right as a user, since new versions of methods
 must be made to work correctly with existing instance state.  LiveImport
-doesn't patch; existing instances keep their old method definitions.
+doesn't patch; existing instances keep their old method definitions.  (But see
+the :ref:`Managing State <managing_state>` section in **Tips**.)
 
 User Experience
 ~~~~~~~~~~~~~~~
