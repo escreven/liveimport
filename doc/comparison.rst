@@ -21,7 +21,7 @@ and class definitions in place, and uses name-based heuristics for rebinding.
 It does not provide import statement equivalent semantics, and it accepts that
 partial updates and inconsistencies will occur.
 
-If your notebook includes the import
+Given the notebook import
 
 .. code-block:: python
 

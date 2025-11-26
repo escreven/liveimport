@@ -68,9 +68,9 @@ def test_dump():
         assert name in text
 
 
-def test_disappearing_symbol():
+def test_disappearing_name():
     """
-    If a module symbol somehow disappears, liveimport should raise a
+    If a module name somehow disappears, liveimport should raise a
     descriptive error.
     """
     liveimport.register(globals(),"""
@@ -132,4 +132,54 @@ def test_no_file():
         error = None
     except ValueError as ex:
         error = ex
-    assert error is not None and "no source file" in str(error)
+    assert error is not None and "no source" in str(error)
+
+
+def test_missing_file():
+    """
+    register() should raise a ValueError if a module has a file with the wrong
+    extension.˚
+    """
+    #
+    # Create a module with a spec but no source file that is apparently
+    # imported.
+    #
+    spec = spec_from_loader("untethered_missing_file",None)
+    assert spec is not None
+    spec.has_location = True
+    spec.origin = "this_file_does_not_exist.py"
+    module = ModuleType("untethered_missing_file")
+    module.__spec__ = spec
+    exec("def hello(): print('hello')", module.__dict__)
+    sys.modules['untethered_missing_file'] = module
+    globals()['untethered_missing_file'] = module
+
+    try:
+        liveimport.register(globals(),"import untethered_missing_file")
+        error = None
+    except ValueError as ex:
+        error = ex
+    assert error is not None and "no source" in str(error)
+
+
+def test_getmtime_failure():
+    """
+    sync() should raise the exception thrown by os.getmtime() when checking for
+    modifications if the reason getmtime() fails is not because the file is
+    missing.
+    """
+    def fake_getmtime(x):
+        raise OSError()
+
+    liveimport.register(globals(),"import mod1")
+
+    try:
+        liveimport.getmtime = fake_getmtime
+        try:
+            liveimport.sync()
+            error = None
+        except OSError as ex:
+            error = ex
+        assert error is not None
+    finally:
+        liveimport.getmtime = os.path.getmtime

@@ -33,23 +33,19 @@ any of ``symcode``, ``printmath``, and ``simulator`` that have changed since
 registration or their last reload.  LiveImport deems a module changed when its
 source file modification time changes.
 
-LiveImport also updates imported module symbols.  For example, if you modify
+LiveImport also updates imported module names.  For example, if you modify
 ``printmath.py``, LiveImport will reload ``printmath`` and bind ``print_math``
 and ``print_eq`` in the global namespace to the new definitions.  Similarly, if
-you update ``simulator.py``, LiveImport will create or update bindings for
-every public symbol in ``simulator`` (where public means in ``__all__`` if
+you modify ``simulator.py``, LiveImport will create or update bindings for
+every public name in ``simulator`` (where public means in ``__all__`` if
 present, and not starting with ``_`` otherwise.)
 
-Importantly, LiveImport *only* updates symbols in the same way the original
+Importantly, LiveImport *only* updates names in the same way the original
 import statements would.  If your notebook and ``symcode`` both happened to
 define a variable ``gamma``, reloading ``symcode`` would not overwrite your
 notebook's value of ``gamma``.  Though it isn't implemented this way, you can
 think of LiveImport as re-executing the registered import statements associated
 with a reloaded module.
-
-Modules referenced by registered import statements are called tracked modules.
-The process of bringing registered imports up to date by reloading tracked
-modules and updating symbols is called syncing.
 
 Hidden Cell Magic
 -----------------
@@ -73,7 +69,46 @@ To use hidden cell magic with the example above, replace the second cell with
 If you prefer, you can disable hidden cell magic by calling
 :func:`hidden_cell_magic(enabled=False) <hidden_cell_magic>`.
 
-.. _dependency_analysis:
+.. _tracked_modules:
+
+Tracked Modules
+---------------
+
+Modules that are monitored by LiveImport for modification are called tracked
+modules.  The process of bringing registered imports up to date by reloading
+tracked modules and updating names is called syncing.
+
+There are two ways a module becomes tracked.  First, it can be referenced by a
+registered import statement.  In the **Overview** example, ``symcode``,
+``printmath``, and ``simulator`` are all tracked modules.  Second, a module in
+LiveImport's workspace (see below) that is referenced by a top-level import in
+a tracked module is itself tracked.
+
+For example, suppose there is a module ``timeutils`` in the workspace that is
+imported by ``simulator``.  Then, even if ``timeutils`` is not mentioned in any
+way in the notebook, LiveImport will track ``timeutils``.  If you edit
+``timeutils.py``, LiveImport will reload ``timeutils``, then reload
+``simulator``, then rebind the names imported from ``simulator`` in the
+notebook.
+
+The second tracked module determination rule (being referenced by a tracked
+module's top-level import statement) is transitive.  If ``timeutils`` imports
+``units``, and ``units`` is also in the workspace, then LiveImport will track
+``units``.
+
+.. _workspace:
+
+LiveImport's workspace is a set of directories.  A module is in the workspace
+if its Python source file is under any of those directories.  The default
+workspace is a single directory, the current working directory when LiveImport
+is first imported. Unless you change it, that is the directory containing your
+notebook.  So, by default, any Python source files alongside your notebook are
+in LiveImport's workspace.  You can change the workspace by calling
+:func:`workspace()`.
+
+The workspace determines only which modules are candidates for tracking because
+of top-level imports from other tracked modules.  Modules referenced by
+registered import statements are always tracked, regardless of the workspace.
 
 Dependency Analysis
 -------------------
@@ -124,10 +159,11 @@ source.  If execution completes without an exception, LiveImport extracts from
 the cell the top-level import statements.  It then registers those statements
 and begins tracking the related modules, if they are not already tracked.
 
-The only restriction LiveImport imposes on import statements is the relevant
-modules must have source files.  Other than that, the statements can overlap,
-they can repeat, they can be any kind of import statement that is legal to use
-in a notebook.  For example, the following cell is perfectly fine.
+The only restriction LiveImport imposes on registered import statements is the
+relevant modules must have Python source files.  Other than that, the
+statements can overlap, they can repeat, they can be any kind of import
+statement that is legal to use in a notebook.  For example, the following cell
+is perfectly fine.
 
   .. code:: python
 
@@ -196,10 +232,9 @@ in Python source that is not nested within another Python construct such as an
       from common import epilogue
 
 In the code above, ``import colors`` and ``from common import epilogue`` are
-the only two top-level import statements.  As stated in the preceding sections,
-LiveImport only processes top-level imports in Python source.  That affects
-both registration through ``%%liveimport`` cells and module dependency
-tracking.
+the only two top-level import statements.  LiveImport only processes top-level
+imports in Python source.  That affects both registration through
+``%%liveimport`` cells and module dependency tracking.
 
 If it's essential for your application, you can use the API to implement
 conditional imports that are registered.  There is an example in the next

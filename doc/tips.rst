@@ -3,37 +3,6 @@
 Tips
 ----
 
-Indirect Dependees
-~~~~~~~~~~~~~~~~~~
-
-The :ref:`Dependency Analysis <dependency_analysis>` section of the user guide
-describes LiveImport's managagement of dependencies between tracked modules.
-However, a module is only tracked if there is a registered import for it.
-Consider these imports.
-
-  .. code:: python
-
-      #_%%liveimport --clear
-      import symcode
-      from printmath import print_math, print_equations as print_eq
-      from simulator import *
-
-If there were a fourth module, ``trace``, imported by ``simulator``, and you
-edited ``trace.py``, neither ``trace`` nor ``simulator`` would reload because
-``trace`` is not tracked.  The solution is simple: add ``trace`` to the
-``%%liveimport`` cell even though you don't use it in the notebook.
-
-  .. code:: python
-
-      #_%%liveimport --clear
-      import symcode
-      from printmath import print_math, print_equations as print_eq
-      from simulator import *
-      import trace
-
-If ``trace`` conflicts with an existing notebook symbol name, use the ``import
-trace as ...`` import form.
-
 .. _managing_state:
 
 Managing State
@@ -46,7 +15,7 @@ cell
   .. code:: python
 
       #_%%liveimport --clear
-      from models import PreActResidualNet
+      import models
       import hyperparam
       import orchestrate
 
@@ -56,7 +25,7 @@ and another cell
 
       # Build the network
       hp = hyperparam.HyperParam(blocks=6, label_smoothing=0.05)
-      net = PreActResidualNet(hp)
+      net = models.PreActResidualNet(hp)
 
 Then, as it does with any cell, whenever you run the "Build the network" cell,
 LiveImport reloads ``models`` and ``hyperparam`` if they've changed before the
@@ -78,17 +47,17 @@ network" cell code to a Python file, perhaps ``managed_state.py`` with content
 
   .. code:: python
 
-      from models import PreActResidualNet
+      import models
       import hyperparam
       hp = hyperparam.HyperParam(blocks=6, label_smoothing=0.05)
-      net = PreActResidualNet(hp)
+      net = models.PreActResidualNet(hp)
 
 and change your ``%%liveimport`` cell to
 
   .. code:: python
 
       #_%%liveimport --clear
-      from models import PreActResidualNet
+      import models
       import hyperparam
       import orchestrate
       from managed_state import hp, net
@@ -96,6 +65,11 @@ and change your ``%%liveimport`` cell to
 Then, when you run the "Train the network" cell, LiveImport will reload (if
 needed) ``hyperparam``, ``models``, and ``managed_state`` in that order,
 resulting in up-to-date ``hp`` and ``net`` references.
+
+If you don't require ``models`` or ``hyperparam`` elsewhere in your notebook,
+you can safely remove them from the ``%%liveimport`` cell.  Liveimport will
+still :ref:`track <tracked_modules>` them because they are imported by
+``managed_state``.
 
 Statements and Registrations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

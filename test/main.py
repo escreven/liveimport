@@ -16,6 +16,8 @@ import dependencies
 import notimported
 import obscurities
 import integration
+import workspace
+import deleted
 
 
 _Case = tuple[str,FunctionType]
@@ -24,12 +26,12 @@ _Case = tuple[str,FunctionType]
 def _get_cases(module:ModuleType) -> list[_Case]:
     mname = module.__name__
     result = []
-    for symbol in dir(module):
-        if symbol.startswith("test_"):
-            value = getattr(module,symbol)
+    for name in dir(module):
+        if name.startswith("test_"):
+            value = getattr(module,name)
             if isinstance(value,FunctionType):
                 if getattr(value,'__module__',None) == mname:
-                    tname = symbol.removeprefix("test_")
+                    tname = name.removeprefix("test_")
                     result.append((mname + ':' + tname,value))
     return result
 
@@ -104,6 +106,8 @@ def main():
     cases.extend(_get_cases(notimported))
     cases.extend(_get_cases(obscurities))
     cases.extend(_get_cases(integration))
+    cases.extend(_get_cases(workspace))
+    cases.extend(_get_cases(deleted))
 
     if (pattern := args.pattern) is not None:
         cases = [ case for case in cases
@@ -123,6 +127,12 @@ def main():
     if args.check_ipython and env['ipython'] != args.check_ipython:
         raise RuntimeError("Unexpected IPython version")
 
+    if len(cases) == 0:
+        print()
+        print("No tests match pattern")
+        print()
+        sys.exit(1)
+
     print()
     print(f"Running {len(cases)} tests")
     print()
@@ -132,6 +142,8 @@ def main():
     captured_output = _CapturedOutput()
 
     for name, fn in cases:
+        liveimport._clear_all_module_info()
+        liveimport.workspace(common.TEMPDIR)
         print("    " + name.ljust(namewd,'.'),end='',flush=True)
         try:
             with captured_output: fn()
@@ -159,7 +171,6 @@ def main():
             print()
             if args.failstop:
                 sys.exit(1)
-        liveimport._clear_all_registrations()
 
     print()
     print(f"{correct} out of {len(cases)} tests succeeded")

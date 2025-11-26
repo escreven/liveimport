@@ -23,6 +23,7 @@ _setup() generates the following file hierarchy in a temporary directory:
     mod3.py  ; imports pkg.subpkg.ssmod2
     mod4.py  ; has __all__ for mod4_public1 and mod4_public2
     mod5.py  ; imported as hide_mod5
+    mod6.pt  ; imports A, pkg.smod1, altpkg.amod1
     pkg/
         __init__.py
         smod1.py
@@ -56,10 +57,10 @@ actually reloaded or not.
 """
 
 try:
-    _TEMPDIR  #type:ignore
+    TEMPDIR  #type:ignore
     raise RuntimeError("Cannot reload test setup module")
 except NameError:
-    _TEMPDIR = None
+    TEMPDIR = None
 
 _TEMPFILES:set[str] = set()
 
@@ -113,11 +114,11 @@ def _module_src(modulename:str, public_count:int=3, private_count:int=3,
 
 def _create_module(modulename:str, **kwargs):
 
-    assert _TEMPDIR is not None
+    assert TEMPDIR is not None
 
     assert modulename not in _MODULE_DEFS
 
-    filename = _TEMPDIR + "/" + modulename.replace('.','/') + ".py"
+    filename = TEMPDIR + "/" + modulename.replace('.','/') + ".py"
 
     assert filename not in _TEMPFILES
 
@@ -132,9 +133,9 @@ def _create_module(modulename:str, **kwargs):
 
 def _create_package(packagename:str):
 
-    assert _TEMPDIR is not None
+    assert TEMPDIR is not None
 
-    dirname = _TEMPDIR + "/" + packagename.replace('.','/') + "/"
+    dirname = TEMPDIR + "/" + packagename.replace('.','/') + "/"
     filename = dirname + "__init__.py"
 
     assert filename not in _TEMPFILES
@@ -149,19 +150,19 @@ def _create_package(packagename:str):
 #
 
 def _setup():
-    global _TEMPDIR
+    global TEMPDIR
 
-    assert _TEMPDIR is None
-    _TEMPDIR = tempfile.mkdtemp(prefix="liveimport-test-")
+    assert TEMPDIR is None
+    TEMPDIR = tempfile.mkdtemp(prefix="liveimport-test-")
 
     atexit.register(_cleanup)
 
-    assert _TEMPDIR not in sys.path
-    sys.path.append(_TEMPDIR)
+    assert TEMPDIR not in sys.path
+    sys.path.append(TEMPDIR)
 
-    os.mkdir(_TEMPDIR + "/pkg")
-    os.mkdir(_TEMPDIR + "/pkg/subpkg")
-    os.mkdir(_TEMPDIR + "/altpkg")
+    os.mkdir(TEMPDIR + "/pkg")
+    os.mkdir(TEMPDIR + "/pkg/subpkg")
+    os.mkdir(TEMPDIR + "/altpkg")
 
     _create_package("pkg")
     _create_package("pkg.subpkg")
@@ -172,6 +173,7 @@ def _setup():
     _create_module("mod3",imports=["import pkg.subpkg.ssmod2"])
     _create_module("mod4",all=["mod4_public1","mod4_public2"])
     _create_module("mod5")
+    _create_module("mod6",imports=["import A, pkg.smod1, altpkg.amod1"])
 
     _create_module("pkg.smod1")
     _create_module("pkg.smod2")
@@ -182,7 +184,8 @@ def _setup():
     _create_module("pkg.subpkg.ssmod1")
     _create_module("pkg.subpkg.ssmod2",imports=[
                    "from . ssmod1 import ssmod1_public1",
-                   "from .. smod1 import smod1_public1"])
+                   "from .. smod1 import smod1_public1",
+                   "from .. import smod4"])
 
     _create_module("A",imports=["import C"])
     _create_module("B",imports=["import C; from D import nan; import G"])
@@ -199,9 +202,9 @@ def _setup():
 _KEEP_TEMPDIR = False
 
 def _cleanup():
-    global _TEMPDIR, _TEMPFILES
+    global TEMPDIR, _TEMPFILES
 
-    assert _TEMPDIR is not None
+    assert TEMPDIR is not None
 
     if _KEEP_TEMPDIR:
         return
@@ -231,7 +234,7 @@ def _cleanup():
         safe_remove(filename)
 
     for tail in ["/pkg/subpkg", "/pkg", "/altpkg", ""]:
-        dir = _TEMPDIR + tail
+        dir = TEMPDIR + tail
         safe_remove_pycache(dir)
         safe_rmdir(dir)
 
@@ -248,6 +251,7 @@ from mod2 import mod2_public1, mod2_public2 as mod2_public2_alias #type:ignore
 from mod3 import * #type:ignore
 from mod4 import * #type:ignore
 import mod5 as hide_mod5 #type:ignore
+import mod6 #type:ignore
 import pkg.smod1 #type:ignore
 from pkg.smod2 import smod2_public1 #type:ignore
 from pkg import smod3 #type:ignore
@@ -307,6 +311,40 @@ def revised_module(modulename:str, sleep:float=0.05, **kwargs):
     modify_module(modulename,sleep,**kwargs)
     yield
     restore_module(modulename,sleep)
+
+#
+# Psuedo-delete a module's source file by renaming it.  (Renaming it means we
+# can easily restore it with its original mtime.)
+#
+
+def delete_module(modulename:str):
+    filename = _module_filename(modulename)
+    if "liveimport-test-" not in filename:
+        raise RuntimeError("UNSAFE RENAME: " + filename)
+    os.rename(filename,filename + '.DELETED')
+
+#
+# Undelete module.
+#
+
+def undelete_module(modulename:str):
+    filename = _module_filename(modulename)
+    os.rename(filename + '.DELETED',filename)
+
+#
+# Delete a module source file within a dynamic scope.  Example:
+#
+#       with deleted_module("mod2"):
+#           ... make sure removal is handled correctly ...
+#
+# On scope exit, the module source file is restored with its original mtime.
+#
+
+@contextmanager
+def deleted_module(modulename:str):
+    delete_module(modulename)
+    yield
+    undelete_module(modulename)
 
 #
 # Change a module's modification time to the current time, sleeping for the
@@ -396,7 +434,7 @@ def describe_environment() -> dict[str,str|None]:
     ipython_version = _pkg_version("IPython")
     notebook_version = _pkg_version("notebook")
 
-    print(f"Temporary directory is {_TEMPDIR}")
+    print(f"Temporary directory is {TEMPDIR}")
 
     print(f"Python {sys.version}")
 

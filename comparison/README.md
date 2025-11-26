@@ -257,9 +257,11 @@ All the other autoreload behavior described so far remains the same.
 
 LiveImport does not have a "automatically reload all" mode.  For one thing,
 organizing notebook code with the relevant imports placed in cells with hidden
-or non-hidden magic is not inconvenient.  More importantly, placing those
-imports in designated cells means LiveImport sees the actual Python import
-statements, and so can fully process them on reload.
+or non-hidden magic is not inconvenient.  For another, LiveImport tracks
+modules reached by chains of imports, meaning fewer import statements are
+required in the notebook.  But most importantly, placing those imports in
+designated cells means LiveImport sees the actual Python import statements, and
+so can fully process them on reload.
 
 Mode `complete` is
 
@@ -290,7 +292,7 @@ define variables, functions, and classes called `common_int` `common_str`,
 and use the phrase "in notebook" in the others.  The `delta.py` definitions
 assign 99 to `common_int` and use the phrase "in delta.py" for the others.
 
-The notebooks do not import any symbols from `delta`, so naturally the lines we
+The notebooks do not import any names from `delta`, so naturally the lines we
 see in the **Print** output of both notebooks for these names are
 
 ```console
@@ -312,10 +314,10 @@ Notebook sees common_str=Common string in delta.py
 Notebook calls common_fn: in notebook
 Notebook constructs Common<class in notebook>
 ```
-In its attempt to rebind symbols in the notebook that are possibly imported
+In its attempt to rebind names in the notebook that are possibly imported
 from `delta`, autoreload overwrote `common_int` and `common_str` in the
 notebook just because they have the same name as variables in `delta`.
 
 LiveImport doesn't make this mistake because it parses the Python import
 statements for the modules it is to manage, and uses those statements to
-determine which symbols to rebind (and which to leave alone.)
+determine which names to rebind (and which to leave alone.)

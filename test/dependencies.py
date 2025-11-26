@@ -17,8 +17,14 @@ from common import *
 #     F -> [none]
 #     G -> [none]
 #
-# There is a cycle A->C->E->A.  Because imports from E are registered after
-# those from A and C, arc E->A should be effectively ignored.
+# There are two modes of testing: direct=True, which registers from each
+# module in alphabetical order, and direct=False, only registers "import
+# B".
+#
+# There is a cycle A->C->E->A.  With direct mode, because imports from E are
+# registered after those from A and C, arc E->A should be effectively ignored.
+# With indirect mode (we register only "import B"), the arc from A->C should be
+# ignored.
 #
 # The primary thing we test in this module are which modules are reloaded and
 # reload order, as reported through the recorder option of sync().  That is
@@ -29,9 +35,11 @@ from common import *
 #
 
 
-def _test(touch_list:list[str], expect_list:list[str]):
+def _test(direct:bool, touch_list:list[str], expect_list:list[str]):
 
-    liveimport.register(globals(),"import A, B, C, D, E, F, G")
+    liveimport.register(globals(),
+        "import A, B, C, D, E, F, G" if direct else
+        "import B")
 
     for modulename in touch_list:
         touch_module(modulename,0)
@@ -51,34 +59,43 @@ def _test(touch_list:list[str], expect_list:list[str]):
             assert re.match(rf'Reloaded {name} because .* reloaded',message)
 
 
-def _define(touch:str, expect:str):
+def _define(direct:bool, touch:str, expect:str):
 
     touch_list = touch.split()
     expect_list = expect.split()
 
-    name = 'test_' + '_'.join(touch_list)
+    name = 'test_' + ('d_' if direct else 'i_') + '_'.join(touch_list)
 
     doc = "    Touching {}, expecting reloads of {}".format(
         ", ".join(touch_list),
         ", ".join(expect_list))
 
-    fn = lambda: _test(touch_list,expect_list)
+    fn = lambda: _test(direct,touch_list,expect_list)
     fn.__name__ = name
     fn.__doc__ = doc
 
     globals()[name] = fn
 
 
-_define("A","A")
-_define("B","B")
-_define("C","C A B")
-_define("D","D B")
-_define("E","E C A B")
-_define("F","F C A D B")
-_define("G","G B")
-_define("B G","G B")
-_define("D F G","F C A D G B")
-_define("A B F","F C A D B")
+_define(True,"A","A")
+_define(True,"B","B")
+_define(True,"C","C A B")
+_define(True,"D","D B")
+_define(True,"E","E C A B")
+_define(True,"F","F C A D B")
+_define(True,"G","G B")
+_define(True,"B G","G B")
+_define(True,"D F G","F C A D G B")
+_define(True,"A B F","F C A D B")
+
+_define(False,"A","A E C B")
+_define(False,"B","B")
+_define(False,"C","C B")
+_define(False,"D","D B")
+_define(False,"E","E C B")
+_define(False,"F","F C D B")
+_define(False,"G","G B")
+_define(False,"D F","F C D B")
 
 
 def test_add_dependency():
