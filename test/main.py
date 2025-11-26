@@ -64,7 +64,12 @@ class _CapturedOutput():
 def _test_always_fail():
     print("I am printed to stdout.")
     print("I am printed to stderr.",file=sys.stderr)
-    def g(): raise RuntimeError("Intentional failure")
+    def h(): raise ValueError("Cause of failure")
+    def g():
+        try:
+            h()
+        except BaseException as ex:
+            raise RuntimeError("This test did not work") from ex
     def f(): g()
     f()
 
@@ -168,6 +173,16 @@ def main():
             print()
             for frame in traceback.format_tb(failure.__traceback__)[1:]:
                 print(textwrap.indent(frame.rstrip(),"    "))
+            cause = failure.__cause__
+            while cause is not None:
+                print()
+                print("Caused By:")
+                print()
+                print(f"    {repr(cause)}")
+                print()
+                for frame in traceback.format_tb(cause.__traceback__)[1:]:
+                    print(textwrap.indent(frame.rstrip(),"    "))
+                cause = cause.__cause__
             print()
             if args.failstop:
                 sys.exit(1)

@@ -3,7 +3,7 @@
 See `the user guide
 <https://liveimport.readthedocs.io/en/latest/userguide.html>`_.
 """
-__version__ = "1.2.0.dev1"
+__version__ = "1.2.0"
 
 from importlib.machinery import ModuleSpec
 import math
@@ -1005,9 +1005,10 @@ def workspace(*directories:str) -> None:
     will be tracked.
 
     .. note::
-        Changing the workspace does not alter tracking decisions
-        LiveImport has already made.  It only affects future decisions.  It's
-        best to specify a non-default workspace before registering any imports.
+        Changing the workspace does not alter tracking decisions LiveImport has
+        already made.  It only affects future decisions.  If you want a
+        non-default workspace, its best to change it before registering any
+        imports.
     """
     global _WORKSPACE
 
