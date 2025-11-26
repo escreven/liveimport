@@ -3,18 +3,21 @@
 See `the user guide
 <https://liveimport.readthedocs.io/en/latest/userguide.html>`_.
 """
-__version__ = "1.1.0"
+__version__ = "1.2.0.dev1"
 
+from importlib.machinery import ModuleSpec
 import math
+from pathlib import Path
 import re
 import sys
 import ast
 import textwrap
 import time
+import os
 from types import ModuleType
 from os.path import getmtime
 from importlib import reload
-from typing import Any, Callable, Literal, NoReturn, TextIO
+from typing import Any, Callable, Iterable, Literal, NoReturn, TextIO
 import IPython
 from IPython.display import display, Markdown
 from IPython.core.magic import Magics, magics_class, cell_magic
@@ -134,6 +137,30 @@ if "_did_register" not in globals():
 #
 
 #
+# The workspace is a possibly empty list of directory paths.  We use Path
+# objects so we can use is_relative_to(), and we normalize using absolute()
+# instead of resolve() because we don't want to follow symbolic links -- most
+# likely what a user expects.
+#
+
+if "_WORKSPACE" not in globals():
+    _WORKSPACE:list[Path] = [ Path(".").absolute() ]
+
+#
+# Return true iff the named file is in the workspace.
+#
+
+def _in_workspace(file:str) -> bool:
+
+    filepath = Path(file).absolute()
+
+    for dirpath in _WORKSPACE:
+        if filepath.is_relative_to(dirpath):
+            return True
+
+    return False
+
+#
 # _Bindings is None for "import A" imports, and "*" or a (<name>,<nameas>) pair
 # list for "from A import ..." statements.
 #
@@ -143,7 +170,7 @@ _Bindings = None | Literal["*"] | list[tuple[str,str]]
 #
 # Each registered import statement is transformed into one or more _Import
 # directives.  Field modulename is always an absolute module name.  Field
-# modulasname is the symbol in the target namespace referencing the loaded
+# modulasname is the name in the target namespace referencing the loaded
 # module.  It is None iff the directive is based on a "from ..." import.
 #
 
@@ -195,18 +222,18 @@ class _Import:
         if bindings is None and modulesym is None:
             modulesym = modulename.split('.',1)[0]
         if modulesym is not None and modulesym not in namespace:
-            self.missing_import(f"No symbol {modulesym} in namespace")
+            self.missing_import(f"No name {modulesym} in namespace")
         if type(bindings) is list:
             for name, asname in bindings:
                 if not hasattr(module,name):
-                    self.missing_import(f"No symbol {name} in {modulename}")
+                    self.missing_import(f"No name {name} in {modulename}")
                 if asname not in namespace:
-                    self.missing_import(f"No symbol {asname} in namespace")
+                    self.missing_import(f"No name {asname} in namespace")
         return module
 
 #
-# A _Projection is mapping of module symbols into a namespace.  There is a
-# projection for every tracked module with imports registered in a namespace,
+# A _Projection is mapping of module provided names into a namespace.  There is
+# a projection for every tracked module with imports registered in a namespace,
 # possibly an empty one.
 #
 
@@ -223,6 +250,14 @@ class _Projection:
 #
 # Information LiveImport tracks about a module in _MODULE_TABLE.
 #
+# Observe that a module is directly imported iff projections is non-empty.
+# sync() uses that fact.
+#
+# We never delete _ModuleInfo objects from _MODULE_TABLE.  That means we can
+# maintain what we know about module source file modification times if the
+# module becomes relevant again.  We do delete projections when registrations
+# are cleared.
+#
 
 class _ModuleInfo:
     __slots__ = ("module", "file", "parent",
@@ -237,10 +272,10 @@ class _ModuleInfo:
         if spec is None:
             raise ValueError(f"Module {module.__name__} has no spec")
 
-        if not spec.has_location:
+        if not _has_source_file(spec):
             raise ValueError(f"Module {module.__name__} has no source file")
 
-        assert (file := spec.origin) is not None
+        assert (file   := spec.origin) is not None
         assert (parent := spec.parent) is not None
 
         self.module      = module         # loaded module instance
@@ -254,14 +289,14 @@ class _ModuleInfo:
         self.analyze_dependencies()
 
     #
-    # Return the names of modules possibly referenced by top level import
-    # statements of the given module file. "Possibly" because in the case of
-    # "from A import B", we include "A.B".  Often, of course, A.B is not a
-    # module -- but that doesn't matter because we only act on an "A.B"
-    # dependency when A.B turns out to be a tracked module.  Returning possibly
-    # instead of definitely referenced module names is an implementation
-    # necessity: it enables the depedency graph to evolve naturally as imports
-    # are registered and cleared.
+    # Assign to self.dependencies the names of modules possibly referenced by
+    # top level import statements of the given module file. "Possibly" because
+    # in the case of "from A import B", we include "A.B".  Often, of course,
+    # A.B is not a module -- but that doesn't matter because we only act on an
+    # "A.B" dependency when A.B turns out to be a tracked module.  Returning
+    # possibly instead of definitely referenced module names is an
+    # implementation necessity: it enables the depedency graph to evolve
+    # naturally as imports are registered and cleared.
     #
 
     def analyze_dependencies(self) -> None:
@@ -269,7 +304,7 @@ class _ModuleInfo:
         with open(self.file) as f:
             source = f.read()
 
-        result = []
+        result:list[str] = []
 
         try:
             for stmt in ast.parse(source,self.file).body:
@@ -289,6 +324,30 @@ class _ModuleInfo:
 _MODULE_TABLE:dict[str,_ModuleInfo] = dict()
 
 #
+# Return true iff the given module spec has a source file.
+#
+
+def _has_source_file(spec:ModuleSpec) -> bool:
+    if not spec.has_location: return False
+    origin = spec.origin
+    assert origin is not None
+    if not origin.endswith(".py"): return False
+    return os.path.exists(origin)
+
+#
+# Return the named file's modification time if it exists, otherwise return
+# None.
+#
+
+def _mtime_if_exists(file:str) -> float|None:
+    try:
+        return getmtime(file)
+    except Exception as ex:
+        if not os.path.exists(file):
+            return None
+        raise
+
+#
 # Return an absolute module reference for "from ... import ..." statements.
 # _absolute_module() embeds functionality equivalent to importlib's
 # resolve_name(), avoiding the need to form a "<dots><name>" string, and
@@ -298,17 +357,23 @@ _MODULE_TABLE:dict[str,_ModuleInfo] = dict()
 def _absolute_module(node:ast.ImportFrom, parent:str,
                      sourcefile:str|None = None) -> str:
 
-    module:str = node.module #type:ignore
+    module:str|None = node.module
 
     if (level := node.level) < 1:
+        assert module is not None
         return module
 
     if len(parent) > 0:
         segments = parent.split('.')
         if level <= len(segments):
-            return '.'.join(segments[:len(segments)-level+1]) + '.' + module
+            result = '.'.join(segments[:len(segments)-level+1])
+            if module is not None:
+                result += '.' + module
+            return result
 
-    message = "Relative import " + ('.' * level) + module
+    message = "Relative import " + ('.' * level)
+    if module is not None:
+        message += module
 
     if len(parent) == 0:
         message += " is outside any package"
@@ -380,15 +445,10 @@ def _register_imports(namespace:dict[str,Any], imports:list[_Import],
                       clear:bool):
 
     if clear:
-        purge = []
         nsid = id(namespace)
         for info in _MODULE_TABLE.values():
             if nsid in info.projections:
                 del info.projections[nsid]
-                if not info.projections:
-                    purge.append(info.module.__name__)
-        for name in purge:
-            del _MODULE_TABLE[name]
 
     for imp in imports:
 
@@ -403,6 +463,8 @@ def _register_imports(namespace:dict[str,Any], imports:list[_Import],
                 if isinstance(value,ModuleType):
                     _situate(value, namespace)
                 projection.aliases.add(name_asname) #type:ignore
+
+    _track_new_indirects()
 
 #
 # Dump the module table content (for debugging).
@@ -420,7 +482,7 @@ def _dump(file:TextIO|None=None):
                 print(f"    {alias[0]} as {alias[1]}",file=file)
 
 #
-# Check registration status (for testing).
+# Check registration and tracking status (for testing).
 #
 
 def _is_registered(namespace:dict[str,Any], modulename:str,
@@ -434,12 +496,60 @@ def _is_registered(namespace:dict[str,Any], modulename:str,
     if name == '*': return projection.star
     return (name,asname) in projection.aliases
 
+def _in_module_table(modulename:str):
+    return modulename in _MODULE_TABLE
+
 #
-# Clear all registrations (for testing).
+# Clear the module table (for testing).
 #
 
-def _clear_all_registrations():
+def _clear_all_module_info():
     _MODULE_TABLE.clear()
+
+#
+# Make sure all tracked module dependencies are themselves tracked if they have
+# source files in the workspace.  _track_new_indirects() should be called after
+# imports are registered, and after modules are reloaded.
+#
+
+def _track_new_indirects():
+
+    #
+    # We perform a breadth-first traveral of the dependency graph.  The initial
+    # cohort is all currently tracked modules.  Subsequent cohorts are modules
+    # tracked because of emergent dependencies in the prior cohort.  Note that
+    # added is implicitly a set, since a named module isn't added to
+    # _MODULE_TABLE more than once.
+    #
+
+    cohort:list[_ModuleInfo] = list(_MODULE_TABLE.values())
+
+    while True:
+        added:list[_ModuleInfo] = []
+        for info in cohort:
+            for modulename in info.dependencies:
+                #
+                # A dependee should be added if it isn't already tracked, is
+                # loaded, has a spec, and has a source file that is in the
+                # workspace.
+                #
+                if modulename in _MODULE_TABLE: continue
+                if (module := sys.modules.get(modulename)) is None: continue
+                if (spec := module.__spec__) is None: continue
+                if not _has_source_file(spec): continue
+                assert (file := spec.origin) is not None
+                if not _in_workspace(file): continue
+                #
+                # Start tracking the dependee.
+                #
+                newinfo = _ModuleInfo(module)
+                assert modulename == module.__name__
+                _MODULE_TABLE[modulename] = newinfo
+                added.append(newinfo)
+        if not added: break
+        cohort = added
+
+    return added
 
 #
 # ============================ PUBLIC API ============================
@@ -449,6 +559,11 @@ def register(namespace:dict[str,Any], importstmts:str,
              *, package:str='', clear:bool=False) -> None:
     """
     Register import statements for syncing.
+
+    All modules referenced by the import statements must already be loaded and
+    have associated source files, and all names mentioned must already exist in
+    `namespace`.  If an associated source file is later modified, then a sync
+    will reload the corresponding module and update names from the module.
 
     :param namespace: The import statement target, usually the caller's value
         of ``globals()``.
@@ -467,11 +582,18 @@ def register(namespace:dict[str,Any], importstmts:str,
     :param clear: If and only if true, discard all prior registrations
         targeting `namespace` before registering the given import statements.
 
-    All modules referenced by the import statements must already be loaded and
-    have associated source files, and all symbols mentioned must already exist
-    in `namespace`.  If an associated source file is later modified, then a
-    sync will reload the corresponding module and update symbols from the
-    module.  Example:
+    :raises SyntaxError: `importstmts` is not syntactically valid.
+
+    :raises ImportError: `importstmts` includes an improper relative import.
+
+    :raises ValueError: `importstmts` includes non-import statements, a
+        referenced module is not loaded or has no associated source file, or an
+        included name does not already exist.
+
+    :raises ModuleError: The content of a module referenced by an import
+        statement is erroneous.
+
+    Example:
 
       .. code:: python
 
@@ -482,7 +604,7 @@ def register(namespace:dict[str,Any], importstmts:str,
         \"\"\")
 
     If ``verify.py`` is modified, a sync will reload ``verify`` and create or
-    update bindings in `namespace` for the same symbols that executing ``from
+    update bindings in `namespace` for the same names that executing ``from
     verify import *`` would.  Similarly, if ``simulator.py`` is modified, a
     sync will reload the module and create or update a binding for ``halt``
     with the value of ``stop`` in ``simulator``.
@@ -527,17 +649,6 @@ def register(namespace:dict[str,Any], importstmts:str,
         liveimport.register(globals(),"import symcode")
 
     are perfectly fine.
-
-    :raises SyntaxError: `importstmts` is not syntactically valid.
-
-    :raises ImportError: `importstmts` includes an improper relative import.
-
-    :raises ValueError: `importstmts` includes non-import statements, a
-        referenced module is not loaded or has no associated source file, or an
-        included symbol does not already exist.
-
-    :raises ModuleError: The content of a module referenced by an import
-        statement is erroneous.
     """
     imports = _extract_imports(textwrap.dedent(importstmts),False,package)
     _register_imports(namespace,imports,clear)
@@ -674,7 +785,7 @@ def _assignments(info:_ModuleInfo):
 def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
     """
     Bring all registered imports up to date.  This includes reloading
-    out-of-date tracked modules and rebinding imported symbols.  A tracked
+    out-of-date tracked modules and rebinding imported names.  A tracked
     module is out-of-date if either the module has changed since registration
     or last sync, or the module depends on an out-of-date tracked module.
 
@@ -713,8 +824,16 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
 
     for info in _MODULE_TABLE.values():
         info.mark = 0
-        current_mtime = getmtime(info.file)
-        if current_mtime != info.mtime:
+        current_mtime = _mtime_if_exists(info.file)
+        if current_mtime is None:
+            #
+            # The module source file is missing.  Pre-mark the module as "Visit
+            # complete; will not reload".  (See below).  That prevents the
+            # topological sort from visiting the module, and ensures the module
+            # will not be added to the reload schedule.
+            #
+            info.mark = 2
+        elif current_mtime != info.mtime:
             info.next_mtime = current_mtime
             info.analyze_dependencies()
             any_updates = True
@@ -734,6 +853,10 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
     #   2 - Visit complete; will not reload
     #   3 - Visit complete; will reload
     #
+    # The roots of the depth first search are the directly imported modules.
+    # That way we don't reload indirect modules if they no longer have
+    # dependants.
+    #
 
     schedule:list[tuple[_ModuleInfo,list[str]]] = []
 
@@ -752,8 +875,11 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
             info.mark = 2
 
     for info in _MODULE_TABLE.values():
-        if info.mark == 0:
+        if info.mark == 0 and info.projections:
             visit(info)
+
+    if not schedule:
+        return
 
     #
     # Execute the reloads.  Because we defer updating info.mtime, if there is a
@@ -770,13 +896,13 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
             if not hasattr(module,modulevar):
                 #
                 # This is not possible in normal use since reload() never
-                # deletes symbols from loaded modules. Likely it can only
-                # happen if the application explicitly deletes symbols from the
+                # deletes names from loaded modules. Likely it can only
+                # happen if the application explicitly deletes names from the
                 # module dictionary.  Because it is so obscure, we judge it
                 # more confusing to document than not.
                 #
                 raise RuntimeError(
-                    f"Module symbol {modulevar} referenced in registered"
+                    f"Name {modulevar} referenced in registered"
                     f" import from {module.__name__} has disappeared")
             else:
                 globals[globalvar] = getattr(module,modulevar)
@@ -786,6 +912,13 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
                 "modified" if info.next_mtime != info.mtime else "dependent",
                 info.next_mtime, list(dependent_reload)))
         info.mtime = info.next_mtime
+
+    #
+    # We check for new indirects after reloads since we need new indirects to
+    # be already loaded.
+    #
+
+    _track_new_indirects()
 
 
 def auto_sync(enabled:bool|None=None,*,
@@ -832,3 +965,66 @@ def hidden_cell_magic(enabled:bool|None=None) -> None:
             break
     if enabled:
         cleanup.append(_unhide_cell_magic)
+
+
+def workspace(*directories:str) -> None:
+    """
+    Define the workspace, a set of directories.
+
+    LiveImport tracks modules that are either imported by a registered import
+    statement, or are imported by a tracked module and have a source file in
+    the workspace.  A source file is in the workspace if it's under a workspace
+    directory.
+
+    The default workspace is the current working directory when the LiveImport
+    module is imported.  Thus, when LiveImport is used in a notebook, the
+    workspace is the directory containing the notebook.
+
+    :param directories: Zero or more path strings.  Each path must identify an
+        existing directory.
+
+    :raises ValueError: One of the specified directories does not exist or
+        exists but is not a directory.
+
+    Example: After calling
+
+      .. code:: python
+
+        liveimport.workspace("src", "/opt/notebook-utils")
+
+    the workspace is the directory ``src`` in the current working directory and
+    the directory ``/opt/notebook-utils``.
+
+    If you call
+
+      .. code:: python
+
+        liveimport.included_directories()
+
+    the workspace is empty, so only modules referenced by registered imports
+    will be tracked.
+
+    .. note::
+        Changing the workspace does not alter tracking decisions
+        LiveImport has already made.  It only affects future decisions.  It's
+        best to specify a non-default workspace before registering any imports.
+    """
+    global _WORKSPACE
+
+    workspace:list[Path] = []
+
+    for dir in directories:
+
+        path = Path(dir).absolute()
+
+        if not path.exists():
+            raise ValueError(f"Path {path} does not exist")
+
+        if not path.is_dir():
+            raise ValueError(f"Path {path} is not a directory")
+
+        workspace.append(path)
+
+    _WORKSPACE = workspace
+
+    _track_new_indirects()

@@ -38,24 +38,24 @@ def test_not_loaded():
                          "Module modX not loaded")
 
 
-def test_no_symbol():
+def test_no_name():
     """
-    Imports referencing undefined symbols.
+    Imports referencing undefined names.
     """
     expect_register_fail("import mod5",
-                         "No symbol mod5 in namespace")
+                         "No name mod5 in namespace")
 
     expect_register_fail("import mod5 as notexists",
-                         "No symbol notexists in namespace")
+                         "No name notexists in namespace")
 
     expect_register_fail("from mod5 import notexists",
-                         "No symbol notexists in mod5")
+                         "No name notexists in mod5")
 
     expect_register_fail("from mod5 import notexists as x",
-                         "No symbol notexists in mod5")
+                         "No name notexists in mod5")
 
     expect_register_fail("from mod5 import mod5_public1 as notexists",
-                         "No symbol notexists in namespace")
+                         "No name notexists in namespace")
 
 
 def test_not_loaded_in_package():
@@ -72,21 +72,21 @@ def test_not_loaded_in_package():
                          "Module pkg.submodX not loaded")
 
 
-def test_no_symbol_in_package():
+def test_no_name_in_package():
     """
-    Imports referencing undefined symbols.
+    Imports referencing undefined names.
     """
     expect_register_fail("import altpkg.amod1",
-                         "No symbol altpkg in namespace")
+                         "No name altpkg in namespace")
 
     expect_register_fail("import pkg.smod4 as notexists",
-                         "No symbol notexists in namespace")
+                         "No name notexists in namespace")
 
     expect_register_fail("from pkg.smod4 import notexists",
-                         "No symbol notexists in pkg.smod4")
+                         "No name notexists in pkg.smod4")
 
     expect_register_fail("from pkg.smod4 import notexists as x",
-                         "No symbol notexists in pkg.smod4")
+                         "No name notexists in pkg.smod4")
 
     expect_register_fail("from pkg.smod4 import smod4_public1 as notexists",
-                         "No symbol notexists in namespace")
+                         "No name notexists in namespace")

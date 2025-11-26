@@ -133,9 +133,9 @@ def test_clear():
     expect_tag("mod4",mod4_tag)
 
 
-def test_undefined_symbol():
+def test_undefined_name():
     """
-    Registering an import statement with undefined module symbols should fail.
+    Registering an import statement with undefined module names should fail.
     """
     try:
         liveimport.register(globals(),"from mod1 import does_not_exist")
@@ -148,9 +148,9 @@ def test_undefined_symbol():
 
 def test_general_reload():
     """
-    All tracked modules should reload after update, rebind imported symbols,
-    and not bind non-imported symbols.  Registered "from ... import *" should
-    only bind public symbols including paying attention to __all__.
+    All tracked modules should reload after update, rebind imported names,
+    and not bind non-imported names.  Registered "from ... import *" should
+    only bind public names including paying attention to __all__.
     """
     liveimport.register(globals(),"""
     import mod1
@@ -181,7 +181,7 @@ def test_general_reload():
     expect_tag("mod3",next_tag(mod3_tag))
     expect_tag("mod4",next_tag(mod4_tag))
 
-    # No global symbols for these
+    # No global names for these
     mod2 = sys.modules['mod2']
     mod3 = sys.modules['mod3']
     mod4 = sys.modules['mod4']
@@ -379,9 +379,9 @@ def test_load_exception():
     reload_expect("mod1")
 
 
-def test_dropped_symbol():
+def test_dropped_name():
     """
-    If we drop a symbol from a module, even a symbol that is referenced in a
+    If we drop a name from a module, even a name that is referenced in a
     registered import statement, there should be no sync issue.
     """
 
@@ -577,7 +577,7 @@ def test_two_namespaces():
     expect_tag("mod2",next_tag(mod2_tag))
     expect_tag("mod3",next_tag(mod3_tag))
 
-    # No global symbols for these
+    # No global names for these
     mod2 = sys.modules['mod2']
     mod3 = sys.modules['mod3']
 
@@ -658,7 +658,7 @@ def test_clear_two_namespaces():
     expect_tag("mod3",next_tag(mod3_tag))
     expect_tag("mod4",mod4_tag)
 
-    # No global symbols for these
+    # No global names for these
     mod2 = sys.modules['mod2']
     mod3 = sys.modules['mod3']
 

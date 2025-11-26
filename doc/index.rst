@@ -25,7 +25,7 @@ Given a cell like
 
 LiveImport will execute the import statements, then automatically reload
 ``common``, ``nets``, or ``hyperparam`` whenever their source files change.
-When LiveImport reloads, it will rebind symbols in the notebook as described by
+When LiveImport reloads, it will rebind names in the notebook as described by
 the import statements.  If ``nets`` imports from ``hyperparam``, then when
 ``hyperparam`` is modified, LiveImport will automatically reload ``nets`` after
 ``hyperparam``.
@@ -41,8 +41,9 @@ hide the cell magic:
     import hyperparam as hp
 
 Hidden cell magic is a user experience feature tailored for modern notebook
-development.  Others include protection against reloading in the middle of
-multi-cell runs and optional reload notification.
+development.  Others include tracking indirectly imported modules, protection
+against reloading in the middle of multi-cell runs, and optional reload
+notification.
 
 The :doc:`User Guide <userguide>` describes how to use LiveImport in notebooks,
 and the :doc:`API Reference <api>` provides more details.  If you currently use
