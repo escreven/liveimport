@@ -330,6 +330,7 @@ def delete_module(modulename:str):
 def undelete_module(modulename:str):
     filename = _module_filename(modulename)
     os.rename(filename + '.DELETED',filename)
+    importlib.invalidate_caches()
 
 #
 # Delete a module source file within a dynamic scope.  Example:
