@@ -217,32 +217,30 @@ You can disable these reports by calling
 Import Statement Order
 ----------------------
 
-While it's best to write Python import statements that don't depend on
-execution order, LiveImport's name rebinding is consistent with that order.
-Suppose ``colors`` and ``formatutil`` both define a global variable ``red``.
-Consider this cell:
+LiveImport name rebinding is consistent with import statement execution order.  Consider a notebook with cell
 
   .. code:: python
 
       #_%%liveimport --clear
-      from colors import *
+      from highlight import *
       from formatutil import *
 
-Whenever the cell runs, the ``from formatutil import *`` statement executes
+where both ``highlight`` and ``formatutil`` both define a name ``red``.
+Whenever that cell runs, the ``from formatutil import *`` statement executes
 second, so Python binds ``red`` in the global namespace to ``formatutil.red``.
-To be consistent with those import statement semantics, if you modify
-``colors.py``, LiveImport reloads ``colors``, but does *not* rebind ``red`` to
-``colors.red`` — it remains bound to ``formatutil.red``.  If you modify
-``formatutil.py``, LiveImport reloads ``formatutil`` and rebinds ``red`` to
-``formatutil``'s possibly new value.
+To match that behavior, if you modify ``highlight.py``, LiveImport reloads
+``highlight``, but does *not* rebind ``red`` to ``highlight.red`` — it remains
+bound to ``formatutil.red``.  If you modify ``formatutil.py``, LiveImport
+reloads ``formatutil`` and rebinds ``red`` to ``formatutil``'s possibly new
+value.
 
-Note that execution order is what counts.  Suppose the cell is split into two
-and the ``--clear`` option is removed:
+Overall execution order is what counts.  Suppose the cell above is split into
+two and the ``--clear`` option is removed:
 
   .. code:: python
 
       #_%%liveimport
-      from colors import *
+      from highlight import *
 
 and
 
@@ -252,8 +250,10 @@ and
       from formatutil import *
 
 If you run the notebook top down, LiveImport will again preserve
-``formatutil``'s value for ``red`` when ``colors`` is reloaded.  But if you run
-the second cell then the first, ``colors.red`` will dominate.
+``formatutil``'s value for ``red`` when it reloads ``highlight``.  But if you
+re-run just the first cell, Python binds ``red`` to ``highlight.red``, and
+LiveImport will now rebind ``red`` to ``highlight.red`` when it reloads
+``highlight``.
 
 Top-Level Imports
 -----------------

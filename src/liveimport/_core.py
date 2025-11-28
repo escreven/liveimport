@@ -156,8 +156,8 @@ def _rebind_str(rebind:_Rebind) -> str:
 
 #
 # Return an equivalent journal that has no superfluous entries according to
-# these lemmas: only the last rebind of an asname might be detected, and only
-# the last '*' rebind for a module might be detected.
+# these lemmas: only the last rebind of an asname can be detected, and only the
+# last '*' rebind for a module can be detected.
 #
 
 def _journal_compact(journal:_Journal) -> _Journal:
@@ -593,8 +593,8 @@ def register(namespace:dict[str,Any], importstmts:str,
         _NAMESPACE_TABLE[nsid] = nsinfo
 
     #
-    # Attach the now tracked modules to the namespace and appending the new
-    # journal segment to the namespace's existing journal.
+    # Attach the referenced modules to the namespace and append the new journal
+    # segment to the namespace's existing journal.
     #
 
     for info in attachments:
@@ -712,8 +712,9 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
     #
     # Execute the reloads.  Because we defer updating info.mtime, if there is a
     # reload error, sync() will try again after the user fixes the issue.  We
-    # only break the loop and re-raise further down on error.  Some modules may
-    # have successfully reloaded -- best to apply the journals.
+    # break the loop and re-raise further down on error since some modules may
+    # have successfully reloaded, so we need to apply the journal to maintain
+    # consistency.
     #
 
     reload_error = None
@@ -736,11 +737,11 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
     # Apply rebind journals related to reloaded modules.
     #
 
-    projections = set()
+    affected = set()
     for module, _ in schedule:
-        projections |= module.attachedto
+        affected |= module.attachedto
 
-    for nsid in projections:
+    for nsid in affected:
         nsinfo = _NAMESPACE_TABLE[nsid]
         _journal_apply(nsinfo.journal,nsinfo.namespace)
 

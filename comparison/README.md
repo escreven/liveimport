@@ -134,8 +134,7 @@ IDEs don't understand what `%aimport` means.
 
 We try to work around issue (2) by having both the import statement we want and
 an `%aimport` mentioning that same module.  In the LiveImport notebook we don't
-have to do that: LiveImport supports every legal Python import statement,
-including relative imports.
+have to do that: LiveImport supports every legal Python import statement.
 
 Let's test the autoreload workaround.  Increment `gamma_tag` in `gamma.py`.
 That will also update a variable `gamma_second` in `gamma.py`.  The
