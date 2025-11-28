@@ -81,8 +81,8 @@ tracked modules and updating names is called syncing.
 There are two ways a module becomes tracked.  First, it can be referenced by a
 registered import statement.  In the **Overview** example, ``symcode``,
 ``printmath``, and ``simulator`` are all tracked modules.  Second, a module in
-LiveImport's workspace (see below) that is referenced by a top-level import in
-a tracked module is itself tracked.
+LiveImport's workspace (described below) that is referenced by a top-level
+import in a tracked module is itself tracked.
 
 For example, suppose there is a module ``timeutils`` in the workspace that is
 imported by ``simulator``.  Then, even if ``timeutils`` is not mentioned in any
@@ -219,22 +219,22 @@ Import Statement Order
 
 While it's best to write Python import statements that don't depend on
 execution order, LiveImport's name rebinding is consistent with that order.
-Suppose ``colors`` and ``formatutils`` both define a global variable ``red``.
+Suppose ``colors`` and ``formatutil`` both define a global variable ``red``.
 Consider this cell:
 
   .. code:: python
 
       #_%%liveimport --clear
       from colors import *
-      from formatutils import *
+      from formatutil import *
 
-Whenever it executes, the ``from formatutils import *`` statement executes
-second, therefore ``red`` is bound in the global namespace to
-``formatutils.red``.  Therefore, to be consistent with those import statement
-semantics, if you modify ``colors.py``, LiveImport reloads ``colors``, but does
-*not* rebind ``red`` to ``color.red`` — it remains bound to
-``formatutils.red``.  If you modify ``formatutils.py``, LiveImport reloads
-``formatutils`` and rebinds ``red`` to ``formatutils``'s possibly new value.
+Whenever the cell runs, the ``from formatutil import *`` statement executes
+second, so Python binds ``red`` in the global namespace to ``formatutil.red``.
+To be consistent with those import statement semantics, if you modify
+``colors.py``, LiveImport reloads ``colors``, but does *not* rebind ``red`` to
+``colors.red`` — it remains bound to ``formatutil.red``.  If you modify
+``formatutil.py``, LiveImport reloads ``formatutil`` and rebinds ``red`` to
+``formatutil``'s possibly new value.
 
 Note that execution order is what counts.  Suppose the cell is split into two
 and the ``--clear`` option is removed:
@@ -249,11 +249,11 @@ and
   .. code:: python
 
       #_%%liveimport
-      from formatutils import *
+      from formatutil import *
 
 If you run the notebook top down, LiveImport will again preserve
-``formatutils``'s value for ``red`` when ``colors`` is reloaded.  But if you
-run the second cell then the first, ``colors``'s value will dominate.
+``formatutil``'s value for ``red`` when ``colors`` is reloaded.  But if you run
+the second cell then the first, ``colors.red`` will dominate.
 
 Top-Level Imports
 -----------------
@@ -338,4 +338,4 @@ Outside of Notebooks
 
 You can use LiveImport outside of notebook environments, but in that case, you
 must use programmatic registration and explicitly sync via
-:func:`register()` and :func:`sync()`.
+:func:`register()` and :func:`sync()` respectively.
