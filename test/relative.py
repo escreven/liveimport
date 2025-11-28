@@ -75,13 +75,11 @@ def test_register_relative():
     liveimport.register(globals(),"from . ssmod1 import ssmod1_public1",
                         package="pkg.subpkg")
 
-    assert is_registered("pkg.subpkg.ssmod1")
     assert is_registered("pkg.subpkg.ssmod1","ssmod1_public1")
 
     liveimport.register(globals(),"from .. smod2 import smod2_public1",
                         package="pkg.subpkg")
 
-    assert is_registered("pkg.smod2")
     assert is_registered("pkg.smod2","smod2_public1")
 
 

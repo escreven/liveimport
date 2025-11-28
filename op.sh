@@ -200,7 +200,7 @@ function report_coverage {
 
     $PYTHON -m coverage run \
         --data-file .coverage.main \
-        --include 'src/liveimport.py,test/*.py' test/main.py
+        --include 'src/liveimport/*.py' test/main.py
 
     [[ -f .coverage.main     ]] || fail "Can't find main coverage data"
     [[ -f .coverage.notebook ]] || fail "Can't find notebook coverage data"

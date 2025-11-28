@@ -403,45 +403,65 @@ def test_additive():
     """
     liveimport.register(globals(),"import mod1")
     assert is_registered("mod1")
-    assert not is_registered("mod2")
+    assert not is_registered("mod2","mod2_public1")
+    assert not is_registered("mod2","mod2_public2","mod2_public2_alias")
+    assert not is_registered("mod3","mod3_public1")
+    assert not is_registered("mod3","*")
 
     liveimport.register(globals(),"from mod2 import mod2_public1")
     assert is_registered("mod1")
-    assert is_registered("mod2")
     assert is_registered("mod2","mod2_public1")
-    assert not is_registered("mod2","mod2_public2")
     assert not is_registered("mod2","mod2_public2","mod2_public2_alias")
+    assert not is_registered("mod3","mod3_public1")
+    assert not is_registered("mod3","*")
 
     liveimport.register(globals(),"from mod2 import mod2_public2 as mod2_public2_alias")
     assert is_registered("mod1")
-    assert is_registered("mod2")
     assert is_registered("mod2","mod2_public1")
-    assert not is_registered("mod2","mod2_public2")
     assert is_registered("mod2","mod2_public2","mod2_public2_alias")
+    assert not is_registered("mod3","mod3_public1")
+    assert not is_registered("mod3","*")
 
     liveimport.register(globals(),"from mod3 import mod3_public1")
-    assert is_registered("mod3")
+    assert is_registered("mod1")
+    assert is_registered("mod2","mod2_public1")
+    assert is_registered("mod2","mod2_public2","mod2_public2_alias")
     assert is_registered("mod3","mod3_public1")
     assert not is_registered("mod3","*")
 
     liveimport.register(globals(),"from mod3 import *")
-    assert is_registered("mod3")
+    assert is_registered("mod1")
+    assert is_registered("mod2","mod2_public1")
+    assert is_registered("mod2","mod2_public2","mod2_public2_alias")
     assert is_registered("mod3","mod3_public1")
     assert is_registered("mod3","*")
 
+    hashcode = hash_state()
     liveimport.register(globals(),"import mod1")
     liveimport.register(globals(),"from mod2 import mod2_public1")
     liveimport.register(globals(),"from mod2 import mod2_public2 as mod2_public2_alias")
     liveimport.register(globals(),"from mod3 import mod3_public1")
     liveimport.register(globals(),"from mod3 import *")
     assert is_registered("mod1")
-    assert is_registered("mod2")
     assert is_registered("mod2","mod2_public1")
-    assert not is_registered("mod2","mod2_public2")
     assert is_registered("mod2","mod2_public2","mod2_public2_alias")
-    assert is_registered("mod3")
     assert is_registered("mod3","mod3_public1")
     assert is_registered("mod3","*")
+    assert hashcode == hash_state()
+
+    liveimport.register(globals(),"""
+    import mod1
+    from mod2 import mod2_public1
+    from mod2 import mod2_public2 as mod2_public2_alias
+    from mod3 import mod3_public1
+    from mod3 import *
+    """)
+    assert is_registered("mod1")
+    assert is_registered("mod2","mod2_public1")
+    assert is_registered("mod2","mod2_public2","mod2_public2_alias")
+    assert is_registered("mod3","mod3_public1")
+    assert is_registered("mod3","*")
+    assert hashcode == hash_state()
 
 
 def test_package_module_registration():
@@ -514,12 +534,12 @@ def test_implicit_package_register():
     """
     liveimport.register(globals(),"import pkg.smod1")
 
-    assert not is_registered("pkg")
     assert is_registered("pkg.smod1")
+    assert not is_tracked("pkg")
 
     liveimport.register(globals(),"from pkg import smod3")
-    assert is_registered("pkg")
     assert is_registered("pkg.smod3")
+    assert is_tracked("pkg",globals())
 
 
 def test_auto_sync_outside_nb():
@@ -626,7 +646,7 @@ def test_clear_two_namespaces():
     assert is_registered('mod1',namespace=ns1)
     assert is_registered('mod2','mod2_public1',namespace=ns1)
     assert is_registered('mod2','mod2_public2','mod2_public2_alias',ns1)
-    assert is_registered('mod4',namespace=ns1)
+    assert is_registered('mod4','mod4_public1',namespace=ns1)
 
     assert is_registered('mod2','mod2_public1',namespace=ns2)
     assert is_registered('mod3','mod3_public1',namespace=ns2)
@@ -636,7 +656,7 @@ def test_clear_two_namespaces():
     assert not is_registered('mod1',namespace=ns1)
     assert not is_registered('mod2','mod2_public1',namespace=ns1)
     assert not is_registered('mod2','mod2_public2','mod2_public2_alias',ns1)
-    assert not is_registered('mod4',namespace=ns1)
+    assert not is_registered('mod4','mod4_public1',namespace=ns1)
 
     assert is_registered('mod2','mod2_public1',namespace=ns2)
     assert is_registered('mod3','mod3_public1',namespace=ns2)
@@ -672,3 +692,22 @@ def test_clear_two_namespaces():
     liveimport.register(ns2,"",clear=True)
     assert not is_registered('mod2','mod2_public1',namespace=ns2)
     assert not is_registered('mod3','mod3_public1',namespace=ns2)
+
+
+def test_top_name_rebind():
+    """
+    Imports of the form "import pkg.submod1" should track pkg.submod1 and
+    rebind pkg to the top level package when pkg.submod1 reloads.  (Since the
+    import execution binds pkg.)
+    """
+    ns:dict[str,Any] = { 'pkg': pkg }
+
+    liveimport.register(ns,"import pkg.smod1")
+    assert is_registered("pkg.smod1",namespace=ns)
+
+    ns['pkg'] = 42
+
+    assert ns['pkg'] == 42
+    touch_module("pkg.smod1")
+    liveimport.sync()
+    assert ns['pkg'] is pkg

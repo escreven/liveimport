@@ -18,6 +18,7 @@ import obscurities
 import integration
 import workspace
 import deleted
+import order
 
 
 _Case = tuple[str,FunctionType]
@@ -74,6 +75,10 @@ def _test_always_fail():
     f()
 
 
+def _exception_to_str(ex:BaseException) -> str:
+    return f"{ex.__class__.__name__}: {ex}"
+
+
 def main():
 
     parser = ArgumentParser(
@@ -100,6 +105,9 @@ def main():
     parser.add_argument("-forcefail", action="store_true",
         help="Include a test that always fails")
 
+    parser.add_argument("-dump", action="store_true",
+        help="Dump internal state on failure")
+
     args = parser.parse_args()
 
     cases = [] if not args.forcefail else [
@@ -113,6 +121,7 @@ def main():
     cases.extend(_get_cases(integration))
     cases.extend(_get_cases(workspace))
     cases.extend(_get_cases(deleted))
+    cases.extend(_get_cases(order))
 
     if (pattern := args.pattern) is not None:
         cases = [ case for case in cases
@@ -147,15 +156,20 @@ def main():
     captured_output = _CapturedOutput()
 
     for name, fn in cases:
-        liveimport._clear_all_module_info()
+        liveimport._clear_all_state()
         liveimport.workspace(common.TEMPDIR)
         print("    " + name.ljust(namewd,'.'),end='',flush=True)
         try:
-            with captured_output: fn()
+            fn_finished = False
+            with captured_output:
+                fn()
+                fn_finished = True
+                liveimport._verify()
             print("OK")
             correct += 1
         except BaseException as failure:
-            print("FAILED")
+            print("FAILED" if not fn_finished else
+                  "FAILED [post-run verification]")
             print()
             if (docstr := inspect.getdoc(fn)):
                 print("Test Description:")
@@ -169,7 +183,7 @@ def main():
                 print()
             print("Test Exception:")
             print()
-            print(f"    {repr(failure)}")
+            print(f"    {_exception_to_str(failure)}")
             print()
             for frame in traceback.format_tb(failure.__traceback__)[1:]:
                 print(textwrap.indent(frame.rstrip(),"    "))
@@ -178,12 +192,15 @@ def main():
                 print()
                 print("Caused By:")
                 print()
-                print(f"    {repr(cause)}")
+                print(f"    {_exception_to_str(cause)}")
                 print()
                 for frame in traceback.format_tb(cause.__traceback__)[1:]:
                     print(textwrap.indent(frame.rstrip(),"    "))
                 cause = cause.__cause__
             print()
+            if args.dump:
+                liveimport._dump()
+                print()
             if args.failstop:
                 sys.exit(1)
 
