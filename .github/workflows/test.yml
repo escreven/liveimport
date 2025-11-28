@@ -45,9 +45,9 @@ jobs:
       run: |
         coverage run \
             --data-file .coverage.main \
-            --include 'src/liveimport.py,test/*.py' test/main.py -failstop
+            --include 'src/liveimport/*.py' test/main.py -failstop
         coverage combine
-        coverage report --include=src/liveimport.py --fail-under=100
+        coverage report --include=src/liveimport/*.py --fail-under=100
 
   full:
     needs: canary
@@ -84,7 +84,7 @@ jobs:
       run: |
         coverage run \
             --data-file .coverage.main \
-            --include 'src/liveimport.py,test/*.py' test/main.py -failstop
+            --include 'src/liveimport/*.py' test/main.py -failstop
         coverage combine
-        coverage report --include=src/liveimport.py --fail-under=100
+        coverage report --include=src/liveimport/*.py --fail-under=100
       shell: bash
