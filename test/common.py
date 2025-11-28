@@ -14,6 +14,8 @@ import tempfile
 from typing import Any
 import liveimport
 from liveimport import ReloadEvent
+from liveimport import _hash_state as hash_state
+from liveimport import _is_tracked as is_tracked
 
 """
 _setup() generates the following file hierarchy in a temporary directory:
@@ -46,9 +48,10 @@ _setup() generates the following file hierarchy in a temporary directory:
     G.py  ; depends on [none]
 
 All the modules include "import re", "from math import nan", a _tag variable,
-three <basename>_public<n>() functions, three <basename>_private<n>() functions,
-and varying additional imports and __all__ declarations upon which tests rely.
-<basename> is the part of a module's name past the last dot.
+some number of <basename>_public<n>() functions (default 3), some number of
+<basename>_private<n>() functions (default 3), a global variable
+"x='<modulename>'" and varying additional imports and __all__ declarations upon
+which tests rely.  <basename> is the part of a module's name past the last dot.
 
 On first load, a module's tag is the pair (<modulename>,1).  On a reload,
 because the tag already exists in the loaded module, the tag becomes
@@ -75,6 +78,7 @@ from math import nan
 {privatefns}
 try: _tag = (_tag[0],_tag[1]+1)
 except: _tag = ('{modulename}',1)
+x='{modulename}'
 {postscript}
 """
 

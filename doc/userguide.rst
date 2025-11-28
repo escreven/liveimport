@@ -44,8 +44,8 @@ Importantly, LiveImport *only* updates names in the same way the original
 import statements would.  If your notebook and ``symcode`` both happened to
 define a variable ``gamma``, reloading ``symcode`` would not overwrite your
 notebook's value of ``gamma``.  Though it isn't implemented this way, you can
-think of LiveImport as re-executing the registered import statements associated
-with a reloaded module.
+think of LiveImport as re-executing the registered import statements when a
+module reloads.
 
 Hidden Cell Magic
 -----------------
@@ -175,11 +175,11 @@ is perfectly fine.
       import symcode
       import symcode as sc
 
-Normally, ``%%liveimport`` cells are additive.  Top-level import statements are
-registered without removing prior registrations.  The ``%%liveimport`` cell
-magic's one optional argument ``--clear`` (or the short form, ``-c``) changes
-that — it causes LiveImport to discard all prior import registrations when the
-cell is run.
+Normally, ``%%liveimport`` cells are additive and idempotent.  Top-level import
+statements are registered by merging them with prior registrations.  The
+``%%liveimport`` cell magic's one optional argument ``--clear`` (or the short
+form, ``-c``) changes that — it causes LiveImport to discard all prior import
+registrations when the cell is run.
 
 Best Practice
 -------------
@@ -213,6 +213,47 @@ automatically reloads modules in a notebook, something like
 
 You can disable these reports by calling
 :func:`auto_sync(report=False)<auto_sync>`.
+
+Import Statement Order
+----------------------
+
+While it's best to write Python import statements that don't depend on
+execution order, LiveImport's name rebinding is consistent with that order.
+Suppose ``colors`` and ``formatutils`` both define a global variable ``red``.
+Consider this cell:
+
+  .. code:: python
+
+      #_%%liveimport --clear
+      from colors import *
+      from formatutils import *
+
+Whenever it executes, the ``from formatutils import *`` statement executes
+second, therefore ``red`` is bound in the global namespace to
+``formatutils.red``.  Therefore, to be consistent with those import statement
+semantics, if you modify ``colors.py``, LiveImport reloads ``colors``, but does
+*not* rebind ``red`` to ``color.red`` — it remains bound to
+``formatutils.red``.  If you modify ``formatutils.py``, LiveImport reloads
+``formatutils`` and rebinds ``red`` to ``formatutils``'s possibly new value.
+
+Note that execution order is what counts.  Suppose the cell is split into two
+and the ``--clear`` option is removed:
+
+  .. code:: python
+
+      #_%%liveimport
+      from colors import *
+
+and
+
+  .. code:: python
+
+      #_%%liveimport
+      from formatutils import *
+
+If you run the notebook top down, LiveImport will again preserve
+``formatutils``'s value for ``red`` when ``colors`` is reloaded.  But if you
+run the second cell then the first, ``colors``'s value will dominate.
 
 Top-Level Imports
 -----------------

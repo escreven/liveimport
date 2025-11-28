@@ -1,6 +1,7 @@
 #
 # Tests exercising parts of the liveimport implementation that are hard to
-# reach without using non-public APIs or abusing the Python environment.
+# reach without being very aware of the implementation or abusing the Python
+# environment.
 #
 
 from importlib.util import spec_from_loader
@@ -8,7 +9,7 @@ from IPython.core.error import UsageError
 import io
 from types import ModuleType
 import liveimport
-from liveimport import _LiveImportMagics, _Import
+from liveimport._nbi import _LiveImportMagics
 from common import *
 
 
@@ -40,17 +41,6 @@ def test_extra_magic_arguments():
     assert error is not None and "extra" in str(error)
 
 
-def test_import_description():
-    """
-    Make sure _Import objects convert to the correct statements.
-    """
-    assert(str(_Import("foo",None,None)) == "import foo")
-    assert(str(_Import("foo","bar",None)) == "import foo as bar")
-    assert(str(_Import("foo",None,"*")) == "from foo import *")
-    assert(str(_Import("foo",None,[("x","x"),("y","z")])) ==
-           "from foo import x, y as z")
-
-
 def test_dump():
     """
     _dump() should at least mention relevant parts of registered import
@@ -65,7 +55,7 @@ def test_dump():
     text = textbuf.getvalue()
     names = ("mod1","mod2","mod2_public1","mod2_public2", "mod2_public2_alias")
     for name in names:
-        assert name in text
+        assert name in text, f"Did not mention {name}"
 
 
 def test_disappearing_name():
@@ -174,7 +164,7 @@ def test_getmtime_failure():
     liveimport.register(globals(),"import mod1")
 
     try:
-        liveimport.getmtime = fake_getmtime
+        liveimport._core.getmtime = fake_getmtime
         try:
             liveimport.sync()
             error = None
@@ -182,4 +172,4 @@ def test_getmtime_failure():
             error = ex
         assert error is not None
     finally:
-        liveimport.getmtime = os.path.getmtime
+        liveimport._core.getmtime = os.path.getmtime

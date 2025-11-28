@@ -30,9 +30,9 @@ def _test(directories:list[str],
     liveimport.register(globals(),"import mod6")
 
     assert is_registered("mod6")
-    assert includes_A     == liveimport._in_module_table("A")
-    assert includes_smod1 == liveimport._in_module_table("pkg.smod1")
-    assert includes_amod1 == liveimport._in_module_table("altpkg.amod1")
+    assert includes_A     == is_tracked("A")
+    assert includes_smod1 == is_tracked("pkg.smod1")
+    assert includes_amod1 == is_tracked("altpkg.amod1")
 
     A_tag     = get_tag("A")
     smod1_tag = get_tag("pkg.smod1")

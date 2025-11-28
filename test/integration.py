@@ -199,7 +199,7 @@ _COVERAGE_START = """
 import coverage
 coverage_object = coverage.Coverage(
     data_file="../.coverage.notebook",
-    include="../src/liveimport.py")
+    include="../src/liveimport/*.py")
 coverage_object.start()
 """
 

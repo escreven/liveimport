@@ -63,7 +63,7 @@ def test_indirect_deleted():
     """)
 
     assert is_registered("mod6")
-    assert liveimport._in_module_table("A")
+    assert is_tracked("A")
 
     mod6_tag = get_tag("mod6")
     A_tag    = get_tag("A")
@@ -71,7 +71,7 @@ def test_indirect_deleted():
     touch_module("A")
 
     with deleted_module("A"):
-        assert liveimport._in_module_table("A")
+        assert is_tracked("A")
 
         reload_clear()
         liveimport.sync(observer=reload_observe)
@@ -99,8 +99,8 @@ def test_thru_deleted():
     """)
 
     assert is_registered("mod6")
-    assert liveimport._in_module_table("A")
-    assert liveimport._in_module_table("C")
+    assert is_tracked("A")
+    assert is_tracked("C")
 
     mod6_tag = get_tag("mod6")
     A_tag    = get_tag("A")
@@ -109,8 +109,8 @@ def test_thru_deleted():
     touch_module("C")
 
     with deleted_module("A"):
-        assert liveimport._in_module_table("A")
-        assert liveimport._in_module_table("C")
+        assert is_tracked("A")
+        assert is_tracked("C")
 
         reload_clear()
         liveimport.sync(observer=reload_observe)
