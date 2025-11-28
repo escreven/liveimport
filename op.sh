@@ -56,7 +56,7 @@ function sdist_file {
 
 #
 # Succeed iff all version markers in the project are identical (currently in
-# pyproject.toml and liveimport.py.)  Output is the consistent version.
+# pyproject.toml and __init__.py.)  Output is the consistent version.
 #
 
 function require_consistent_version {
@@ -70,14 +70,15 @@ function require_consistent_version {
 
     local python_version
     python_version=$(\
-        sed -n 's/^__version__ = "\([^"][^"]*\)"/\1/p' src/liveimport.py)
+        sed -n 's/^__version__ = "\([^"][^"]*\)"/\1/p' \
+            src/liveimport/__init__.py)
 
     [[ -z $python_version ]] \
-        && fail "Could not find version in liveimport.py"
+        && fail "Could not find version in src/liveimport/__init__.py"
 
     [[ $pyproject_version == "$python_version" ]] \
         || fail "Version mismatch: pyproject.toml ($pyproject_version)" \
-                "!= src/liveimport.py ($python_version)"
+                "!= src/liveimport/__init__.py ($python_version)"
 
     echo "$python_version"
 }
