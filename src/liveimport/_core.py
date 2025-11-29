@@ -302,7 +302,7 @@ _MODULE_TABLE:dict[str,_ModuleInfo] = dict()
 # imports are registered, and after modules are reloaded.
 #
 
-def _track_new_indirects():
+def _track_new_indirects() -> None:
 
     #
     # We perform a breadth-first traveral of the dependency graph.  The initial
@@ -339,8 +339,6 @@ def _track_new_indirects():
         if not added: break
         cohort = added
 
-    return added
-
 #
 # Ensure module is tracked.
 #
@@ -373,9 +371,15 @@ def _register_piece(namespace:dict[str,Any], journal:_Journal,
                     name:str|None, asname:str|None) -> _ModuleInfo:
 
     def invalid(reason:str) -> NoReturn:
-        stmt = (f"import {trackmodname}" if name is None else
-                f"from {valuemodname} import {name}")
-        if asname is not None and asname != name: stmt += f" as {asname}"
+        if name is None:
+            stmt = "import " + trackmodname
+            assert asname is not None
+            if asname != valuemodname:
+                stmt += " as " + asname
+        else:
+            stmt = "from " + trackmodname + " import " + name
+            if asname is not None and asname != name:
+                stmt += " as " + asname
         raise ValueError(f"{reason}; missing {stmt}?")
 
     trackmod = sys.modules.get(trackmodname)
