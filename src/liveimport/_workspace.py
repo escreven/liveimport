@@ -41,7 +41,7 @@ def workspace(*directories:str) -> None:
     :param directories: Zero or more path strings.  Each path must identify an
         existing directory.
 
-    :raises ValueError: One of the specified directories does not exist or
+    :raises ValueError: One of the specified paths does not exist or
         exists but is not a directory.
 
     Example: After calling
@@ -57,7 +57,7 @@ def workspace(*directories:str) -> None:
 
       .. code:: python
 
-        liveimport.included_directories()
+        liveimport.workspace()  # No paths given
 
     the workspace is empty, so only modules referenced by registered imports
     will be tracked.
