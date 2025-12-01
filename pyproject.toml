@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "liveimport"
-version = "1.2.1.dev1"
+version = "1.2.1"
 description = "Automatically reload modified Python modules in notebooks and scripts."
 readme = "README.md"
 authors = [{ name = "Edward Screven" }]
@@ -13,7 +13,7 @@ requires-python = ">=3.10"
 dependencies = [
     "IPython >=7.23.1"
 ]
-keywords = ["liveimport", "import", "reload", "notebooks", "python"]
+keywords = ["notebook", "jupyter", "ipython", "import", "reload", "autoreload"]
 classifiers = [
     "Operating System :: OS Independent",
     "Framework :: IPython",
