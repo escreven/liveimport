@@ -18,7 +18,7 @@ _IPYTHON_SHELL = IPython.get_ipython()  #type:ignore
 _transform_cell = TransformerManager().transform_cell
 
 #
-# Implement %%liveimport cell magic as described in the module docstring.
+# Implement %%liveimport cell magic as described in user guide.
 # Note that re-registering magics does not cause accumulation.
 #
 
