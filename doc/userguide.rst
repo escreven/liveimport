@@ -159,8 +159,7 @@ source.  If execution completes without an exception, LiveImport extracts from
 the cell the top-level import statements.  It then registers those statements
 and begins tracking the related modules, if they are not already tracked.
 
-The only restriction LiveImport imposes on registered import statements is the
-relevant modules must have Python source files.  Other than that, the
+LiveImport imposes no restrictions on the registered import statements: the
 statements can overlap, they can repeat, they can be any kind of import
 statement that is legal to use in a notebook.  For example, the following cell
 is perfectly fine.
@@ -169,11 +168,11 @@ is perfectly fine.
 
       #_%%liveimport
       from symcode import x, hermite_poly
-      from symcode import x, lagrange_poly
-      from symcode import lagrange_poly as lp
+      from symcode import x, lagrange_poly as lp
       from symcode import *
-      import symcode
-      import symcode as sc
+      import symcode as sc, simulator
+      from utils.latex_support import (QUAD,
+          REAL_NUMBERS as R)
 
 Normally, ``%%liveimport`` cells are additive and idempotent.  Top-level import
 statements are registered by merging them with prior registrations.  The
