@@ -46,6 +46,14 @@ _setup() generates the following file hierarchy in a temporary directory:
     E.py  ; depends on A
     F.py  ; depends on [none]
     G.py  ; depends on [none]
+    subdir1/
+        mod7.py
+        nspkg/
+            mod8.py
+    subdir2/
+        mod9.py
+        nspkg/
+            mod10.py
 
 All the modules include "import re", "from math import nan", a _tag variable,
 some number of <basename>_public<n>() functions (default 3), some number of
@@ -167,6 +175,10 @@ def _setup():
     os.mkdir(TEMPDIR + "/pkg")
     os.mkdir(TEMPDIR + "/pkg/subpkg")
     os.mkdir(TEMPDIR + "/altpkg")
+    os.mkdir(TEMPDIR + "/subdir1")
+    os.mkdir(TEMPDIR + "/subdir1/nspkg")
+    os.mkdir(TEMPDIR + "/subdir2")
+    os.mkdir(TEMPDIR + "/subdir2/nspkg")
 
     _create_package("pkg")
     _create_package("pkg.subpkg")
@@ -198,6 +210,15 @@ def _setup():
     _create_module("E",imports=["import A as littlea"])
     _create_module("F")
     _create_module("G")
+    _create_module("subdir1.mod7")
+    _create_module("subdir1.nspkg.mod8")
+    _create_module("subdir2.mod9")
+    _create_module("subdir2.nspkg.mod10")
+
+    subdir1_path = TEMPDIR + "/subdir1"
+    subdir2_path = TEMPDIR + "/subdir2"
+
+    sys.path = [ subdir1_path, subdir2_path ] + sys.path
 
 #
 # Carefully remove temporary files and directories.
@@ -237,7 +258,9 @@ def _cleanup():
     for filename in _TEMPFILES:
         safe_remove(filename)
 
-    for tail in ["/pkg/subpkg", "/pkg", "/altpkg", ""]:
+    for tail in ["/pkg/subpkg", "/pkg", "/altpkg",
+                 "/subdir1/nspkg", "/subdir1",
+                 "/subdir2/nspkg", "/subdir2", "" ]:
         dir = TEMPDIR + tail
         safe_remove_pycache(dir)
         safe_rmdir(dir)
@@ -266,6 +289,12 @@ from pkg.subpkg.ssmod1 import ssmod1_public1 #type:ignore
 import pkg.subpkg #type:ignore
 import A, B, C, D, E, F, G #type:ignore
 from altpkg import amod1 #type:ignore
+import subdir1 #type:ignore
+from subdir1 import mod7 #type:ignore
+from subdir2.mod9 import mod9_public1 #type:ignore
+import nspkg #type:ignore
+from nspkg import mod8 #type: ignore
+from nspkg.mod10 import mod10_public1 #type: ignore
 
 #
 # Given a module name, return its source file.

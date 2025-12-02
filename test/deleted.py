@@ -127,3 +127,39 @@ def test_thru_deleted():
     expect_tag("mod6", next_tag(mod6_tag))
     expect_tag("A"   , next_tag(A_tag))
     expect_tag("C"   , next_tag(C_tag))
+
+
+def test_delete_before_register():
+    """
+    Registering a module with a source file deleted between being imported
+    should be allowed, and if the source file is restored, a sync should reload
+    it immediately.
+    """
+    with deleted_module("mod1"):
+
+        liveimport.register(globals(),"""
+        import mod1
+        from mod2 import mod2_public1
+        """)
+
+        assert is_registered("mod1")
+        assert is_registered("mod2","mod2_public1")
+
+        mod1_tag = get_tag("mod1")
+        mod2_tag = get_tag("mod2")
+
+        touch_module("mod2")
+
+        reload_clear()
+        liveimport.sync(observer=reload_observe)
+        reload_expect("mod2")
+
+        expect_tag("mod1",mod1_tag)
+        expect_tag("mod2",next_tag(mod2_tag))
+
+    reload_clear()
+    liveimport.sync(observer=reload_observe)
+    reload_expect("mod1")
+
+    # Remember that tags are bumped on reload, not by touch.
+    expect_tag("mod1",next_tag(mod1_tag))
