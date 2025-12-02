@@ -11,14 +11,15 @@ import common
 
 # Modules defining tests:
 import coreapi
-import relative
+import deleted
 import dependencies
 import notimported
+import plaindir
 import obscurities
-import integration
-import workspace
-import deleted
 import order
+import relative
+import workspace
+import integration
 
 
 _Case = tuple[str,FunctionType]
@@ -114,14 +115,15 @@ def main():
         ('main:always_fail', _test_always_fail) ]
 
     cases.extend(_get_cases(coreapi))
-    cases.extend(_get_cases(relative))
+    cases.extend(_get_cases(deleted))
     cases.extend(_get_cases(dependencies))
     cases.extend(_get_cases(notimported))
     cases.extend(_get_cases(obscurities))
-    cases.extend(_get_cases(integration))
-    cases.extend(_get_cases(workspace))
-    cases.extend(_get_cases(deleted))
     cases.extend(_get_cases(order))
+    cases.extend(_get_cases(plaindir))
+    cases.extend(_get_cases(relative))
+    cases.extend(_get_cases(workspace))
+    cases.extend(_get_cases(integration))
 
     if (pattern := args.pattern) is not None:
         cases = [ case for case in cases

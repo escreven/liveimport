@@ -104,7 +104,7 @@ def test_no_spec():
 
 def test_no_file():
     """
-    register() should raise a ValueError if a module has no source file.
+    register() should allow modules with no source file.
     """
     #
     # Create a module with a spec but no source file that is apparently
@@ -117,39 +117,28 @@ def test_no_file():
     sys.modules['untethered_no_file'] = module
     globals()['untethered_no_file'] = module
 
-    try:
-        liveimport.register(globals(),"import untethered_no_file")
-        error = None
-    except ValueError as ex:
-        error = ex
-    assert error is not None and "no source" in str(error)
+    liveimport.register(globals(),"import untethered_no_file")
 
 
-def test_missing_file():
+def test_unknown_extension():
     """
-    register() should raise a ValueError if a module has a file with the wrong
-    extension.˚
+    register() should allow modules with unknown extensions.
     """
     #
     # Create a module with a spec but no source file that is apparently
     # imported.
     #
-    spec = spec_from_loader("untethered_missing_file",None)
+    spec = spec_from_loader("untethered_unknown_extension",None)
     assert spec is not None
     spec.has_location = True
-    spec.origin = "this_file_does_not_exist.py"
-    module = ModuleType("untethered_missing_file")
+    spec.origin = "untethered_unknown_extension.so"
+    module = ModuleType("untethered_unknown_extension")
     module.__spec__ = spec
     exec("def hello(): print('hello')", module.__dict__)
-    sys.modules['untethered_missing_file'] = module
-    globals()['untethered_missing_file'] = module
+    sys.modules['untethered_unknown_extension'] = module
+    globals()['untethered_unknown_extension'] = module
 
-    try:
-        liveimport.register(globals(),"import untethered_missing_file")
-        error = None
-    except ValueError as ex:
-        error = ex
-    assert error is not None and "no source" in str(error)
+    liveimport.register(globals(),"import untethered_unknown_extension")
 
 
 def test_getmtime_failure():

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import math
 import sys
 import ast
 import time
@@ -43,7 +44,9 @@ def _nice_list(strs:list[str]) -> str:
 # Return a file's modification time if it exists, otherwise return None.
 #
 
-def _mtime_if_exists(file:str) -> float|None:
+def _mtime_if_exists(file:str|None) -> float|None:
+    if file is None:
+        return None
     try:
         return getmtime(file)
     except Exception as ex:
@@ -93,12 +96,12 @@ def _absolute_module(node:ast.ImportFrom, parent:str,
 # Return true iff the given module spec has a source file.
 #
 
-def _has_source_file(spec:ModuleSpec) -> bool:
+def _has_source_file(spec:ModuleSpec, must_exist=False) -> bool:
     if not spec.has_location: return False
     origin = spec.origin
     assert origin is not None
     if not origin.endswith(".py"): return False
-    return exists(origin)
+    return not must_exist or exists(origin)
 
 #
 # Rebind asname in namespace to a named value in module, raising a descriptive
@@ -237,7 +240,14 @@ class _ModuleInfo:
                  "mtime", "attachedto", "dependencies",
                  "next_mtime", "mark")
 
-    attachedto : set[int]
+    module       : ModuleType  # loaded module instance
+    file         : str|None    # source file name or None if no file
+    parent       : str         # parent package or ''
+    mtime        : float       # last known modification time
+    attachedto   : set[int]    # imported into these namespaces
+    next_mtime   : float       # see sync()
+    mark         : int         # see sync()
+    dependencies : list[str]   # known to depend on these named modules
 
     def __init__(self, module:ModuleType):
 
@@ -245,21 +255,23 @@ class _ModuleInfo:
         if spec is None:
             raise ValueError(f"Module {module.__name__} has no spec")
 
-        if not _has_source_file(spec):
-            raise ValueError(f"Module {module.__name__} has no source file")
+        self.module       = module
+        self.parent       = '' if spec.parent is None else spec.parent
+        self.attachedto   = set()
+        self.mark         = 0
+        self.mtime        = -math.inf
+        self.next_mtime   = -math.inf
+        self.dependencies = []
 
-        assert (file   := spec.origin) is not None
-        assert (parent := spec.parent) is not None
-
-        self.module     = module         # loaded module instance
-        self.file       = file           # source file name
-        self.parent     = parent         # parent package or ''
-        self.mtime      = getmtime(file) # last known modification time
-        self.attachedto = set()          # imported into these namespaces
-        self.next_mtime = self.mtime     # see sync()
-        self.mark       = 0              # see sync()
-
-        self.analyze_dependencies()
+        if _has_source_file(spec, must_exist=False):
+            assert (file := spec.origin) is not None
+            self.file = file
+            if (mtime := _mtime_if_exists(file)) is not None:
+                self.mtime      = mtime
+                self.next_mtime = mtime
+                self.analyze_dependencies()
+        else:
+            self.file = None
 
     #
     # Assign to self.dependencies the names of modules possibly referenced by
@@ -273,6 +285,8 @@ class _ModuleInfo:
     #
 
     def analyze_dependencies(self) -> None:
+
+        assert self.file
 
         with open(self.file) as f:
             source = f.read()
