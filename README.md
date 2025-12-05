@@ -1,3 +1,8 @@
+[![PyPI Version](https://img.shields.io/pypi/v/liveimport.svg)](https://pypi.org/project/liveimport/)
+[![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/escreven/liveimport/blob/main/.github/workflows/test.yml)
+[![Read the Docs Status](https://readthedocs.org/projects/liveimport/badge/?version=latest)](https://liveimport.readthedocs.io)
+[![View on GitHub](https://img.shields.io/badge/Source-GitHub-blue?logo=github)](https://github.com/escreven/liveimport)
+
 ## Overview
 
 LiveImport reliably and automatically reloads Python modules in Jupyter

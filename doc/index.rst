@@ -4,11 +4,10 @@ LiveImport
 ==========
 
 LiveImport reliably and automatically reloads Python modules in Jupyter
-notebooks.  Unlike IPython's autoreload extension, LiveImport reloads are
-well-defined, deterministic operations that follow the semantics of a
-developer's import statements exactly.  It maintains consistency between
-modules by automatically reloading dependent modules as needed, ensuring
-up-to-date references across a notebook and its modules.
+notebooks.  LiveImport reloads are well-defined, deterministic operations that
+follow the semantics of a developer's import statements exactly.  It maintains
+consistency between modules by automatically reloading dependent modules as
+needed, ensuring up-to-date references across a notebook and its modules.
 
 LiveImport is designed for developers who interactively build Jupyter notebooks
 together with external Python code, and who want predictable reloading with
@@ -62,5 +61,5 @@ See :doc:`Installation <installation>` to get started.
     api
     comparison
     installation
-    issues
+    resources
     tips
