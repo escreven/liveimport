@@ -9,6 +9,7 @@ from IPython.core.inputtransformer2 import TransformerManager
 
 from ._core import ModuleError, sync, register
 
+
 #
 # Notebook integration.
 #
@@ -55,33 +56,54 @@ def _display_reload_events(events):
 # reinstalling event handlers on module reload so the registrations don't
 # accumulate.
 #
+# We defer displaying reload reports when the first cell after a grace period
+# appears to be a bootstrap cell, a cell executed by a frontend to configure
+# the kernel in some way.  We judge a cell to be bootstrap if store_history is
+# False and cell_id is None.  The deferred reports are displayed (if enabled)
+# when a non-bootstrap cell is executed before the grace period expires.  If
+# that doesn't happen, the deferred reports are never displayed -- we don't
+# want reports showing up at surprising times.
+#
 
 class _LiveImportHandler:
     __slots__ = ("autosync_enabled", "autosync_report",
-                 "autosync_grace", "post_cell_time")
+                 "autosync_grace", "post_cell_time",
+                 "deferred_events")
 
     def __init__(self):
         self.autosync_enabled = True
         self.autosync_grace   = 1.0
         self.autosync_report  = True
         self.post_cell_time   = -math.inf
+        self.deferred_events  = []
 
     def pre_run_cell(self,info):
-        if self.autosync_enabled:
-            now = time.monotonic()
-            if now - self.post_cell_time >= self.autosync_grace:
-                events = []
-                try:
-                    sync(observer=lambda event: events.append(event))
-                    sync_ex = None
-                except Exception as ex:
-                    sync_ex = ex
-                if events and self.autosync_report:
+        if not self.autosync_enabled:
+            return
+        looks_like_bootstrap = not info.store_history and info.cell_id is None
+        deferred_events = self.deferred_events
+        now = time.monotonic()
+        if now - self.post_cell_time >= self.autosync_grace:
+            deferred_events.clear()
+            events = []
+            try:
+                sync(observer=lambda event: events.append(event))
+                sync_ex = None
+            except Exception as ex:
+                sync_ex = ex
+            if events:
+                if looks_like_bootstrap:
+                    self.deferred_events = events
+                elif self.autosync_report:
                     _display_reload_events(events)
-                if isinstance(sync_ex,ModuleError):
-                    sync_ex = sync_ex.__cause__
-                if sync_ex is not None:
-                    raise sync_ex.with_traceback(sync_ex.__traceback__)
+            if isinstance(sync_ex,ModuleError):
+                sync_ex = sync_ex.__cause__
+            if sync_ex is not None:
+                raise sync_ex.with_traceback(sync_ex.__traceback__)
+        elif deferred_events and not looks_like_bootstrap:
+            if self.autosync_report:
+                _display_reload_events(deferred_events)
+            deferred_events.clear()
 
     def post_run_cell(self,result):
         self.post_cell_time = time.monotonic()

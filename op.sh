@@ -118,6 +118,18 @@ function require_releasable_version {
 }
 
 #
+# Succeed iff the source code does not contain the string NORELEASE.  This way
+# we can mark temporary modifications to prevent their accidental released.
+#
+
+function require_releasable_source {
+    local sourcefiles
+    sourcefiles=$(find . -type f \( -name '*.py' -o -name '*.ipynb' \) -print)
+    grep -qE "NORELEASE" $sourcefiles \
+        && fail "Source has NORELEASE marks."
+}
+
+#
 # Succeed iff the given version and no other is built, and twine check
 # succeeds for that build.
 #
@@ -203,8 +215,10 @@ function report_coverage {
         --data-file .coverage.main \
         --include 'src/liveimport/*.py' test/main.py
 
-    [[ -f .coverage.main     ]] || fail "Can't find main coverage data"
-    [[ -f .coverage.notebook ]] || fail "Can't find notebook coverage data"
+    [[ -f .coverage.main      ]] || fail "Can't find main coverage data"
+    [[ -f .coverage.notebook  ]] || fail "Can't find notebook coverage data"
+    compgen -G ".coverage.bootstrap-*" || \
+        fail "Can't find bootstrap coverage data"
 
     $PYTHON -m coverage combine
 
@@ -299,6 +313,7 @@ function declare_release {
     require_not_released "$version"
     require_good_build "$version"
     require_git_clean $PUBLIC/main
+    require_releasable_source
     require_deployable_README
 
     tag="v$version"
@@ -359,6 +374,7 @@ usage() {
     echo "    check-version       Verify and print consistent project version"
     echo "    check-dist          Verify the distribution files"
     echo "    check-clean-main    Verify local repo is on clean main branch"
+    echo "    check-source        Verify source code is releasable"
     echo "    check-README        Verify README.md is deployable"
     echo "    declare-release     Tag current clean main branch as a release"
     echo "    deploy-to-testpypi  Upload distribution files to TestPyPI"
@@ -416,6 +432,9 @@ function act {
             ;;
         check-clean-main)
             require_git_clean $PUBLIC/main
+            ;;
+        check-source)
+            require_releasable_source
             ;;
         check-README)
             require_deployable_README
