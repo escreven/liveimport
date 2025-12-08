@@ -130,7 +130,6 @@ if "_did_register" not in globals():
     _did_register = True
     if _IPYTHON_SHELL is not None:
         _IPYTHON_SHELL.register_magics(_LiveImportMagics)
-        _IPYTHON_SHELL.register_magics(_LiveImportMagics)
         _HANDLER = _LiveImportHandler()
         _IPYTHON_SHELL.events.register('pre_run_cell',_HANDLER.pre_run_cell)
         _IPYTHON_SHELL.events.register('post_run_cell',_HANDLER.post_run_cell)

@@ -19,7 +19,7 @@ from jupyter_client import KernelManager  #type:ignore
 # support.
 #
 # While it would be simpler to use an in-process IPython shell here, we start a
-# headless kernel insteadto avoid any potential contamination of other tests
+# headless kernel instead to avoid any potential contamination of other tests
 # from IPython state.
 #
 
@@ -37,9 +37,9 @@ def _trace(*s:str):
 
 def _trace_multiline(text:str):
     if _trace_enable:
-        lines = text.split('\n')
+        lines = text.splitlines()
         for line in lines:
-            print(".... | " + line.rstrip('\n'))
+            print(".... | " + line)
 
 #
 # Encapsulate an IPython kernel connection.
@@ -72,10 +72,10 @@ class _Kernel:
     def run_cell(self, code:str, store_history=True):
         """
         Send code to the kernel, setting the store_history option as specified.
-        `run_cell()` returns the tuple (markdown,stdout,stderr), where all
-        three are lists of strings.  Other content is discarded.  If running
-        the cell raises an exception in the kernel (including if code in the
-        call raises an exception), `run_cell()` raises a `RuntimeError`.
+        `run_cell()` returns the tuple (markdown,stdout), where both are lists
+        of strings.  Other content is discarded.  If running the cell raises an
+        exception in the kernel (including if code in the call raises an
+        exception), `run_cell()` raises a `RuntimeError`.
         """
         code = textwrap.dedent(code)
 
@@ -97,7 +97,6 @@ class _Kernel:
 
         markdown:list[str] = []
         stdout:list[str]   = []
-        stderr:list[str]   = []
 
         while True:
             #
@@ -124,7 +123,8 @@ class _Kernel:
 
             if mtype == 'stream':
                 #
-                # We have stdout or stderr.
+                # We have stream data that might be stdout.  Raise an exception
+                # if it's anything else (like stderr).
                 #
                 name = msg['content']['name']
                 text = msg['content']['text']
@@ -132,11 +132,8 @@ class _Kernel:
                 if name == 'stdout':
                     _trace_multiline(text)
                     stdout.append(text)
-                elif name == 'stderr':
-                    _trace_multiline(text)
-                    stderr.append(text)
                 else:
-                    raise RuntimeError(f"Unexpected stream name: {name}")
+                    raise RuntimeError(f"Unexpected stream: {name}")
 
             elif mtype == 'display_data':
                 #
@@ -170,7 +167,7 @@ class _Kernel:
                             content['ename'] + ": " + content['evalue'])
                     break
 
-        return markdown, stdout, stderr
+        return markdown, stdout
 
     def close(self):
         """
@@ -193,10 +190,10 @@ class _Kernel:
             pass
 
 #
-# Code coverage support.  Each test creates a new IPython kernel each running
+# Code coverage support.  Each test creates a new IPython kernel running
 # in its own process.  Thus, each kernel must start coverage and save the
-# resulting data when we are generating coverage reports.  Each kernel must
-# write the data to a uniquely named file.
+# resulting data to generate coverage reports.  Each kernel must
+# write the data to a file specific to each test.
 #
 
 _COVERAGE_START = """
@@ -215,7 +212,7 @@ coverage_object.save()
 def _coverage_start(kernel:_Kernel, name:str):
     """
     Inject a cell to start collecting coverage data if required.  Argument
-    `name` must be unique.
+    `name` must be specific to each test.
     """
     if coverage.Coverage.current():
         kernel.run_cell(_COVERAGE_START.format(name=name))
@@ -243,8 +240,8 @@ def _touch(kernel:_Kernel):
     Modify module mod1.
     """
     #
-    # There is no point to sleeping on the kernel side.  (In fact it's
-    # problematic since it delays the start of the grace period.)
+    # There is no point to sleeping on the kernel side.  Delays
+    # between calls to run_cell are what matter.
     #
     kernel.run_cell("touch_module('mod1',sleep=0)\n")
 
@@ -258,7 +255,7 @@ def _bootstrap(kernel:_Kernel, expect_next_tag=False):
     code = "print('bootstrap')\n"
     if expect_next_tag:
         code += "expect_tag('mod1',next_tag(mod1_tag))\n"
-    markdown, stdout, _ = kernel.run_cell(code, store_history=False)
+    markdown, stdout = kernel.run_cell(code, store_history=False)
     assert 'bootstrap' in "".join(stdout)
     assert len(markdown) == 0
 
@@ -267,7 +264,7 @@ def _normal(kernel:_Kernel, expect_reload:bool):
     """
     Run a simulated normal user cell.
     """
-    markdown, stdout, _ = kernel.run_cell("print('normal')")
+    markdown, stdout = kernel.run_cell("print('normal')")
     assert 'normal' in "".join(stdout)
     if expect_reload:
         assert len(markdown) == 1
