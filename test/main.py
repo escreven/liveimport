@@ -19,6 +19,7 @@ import obscurities
 import order
 import relative
 import workspace
+import bootstrap
 import integration
 
 
@@ -123,6 +124,7 @@ def main():
     cases.extend(_get_cases(plaindir))
     cases.extend(_get_cases(relative))
     cases.extend(_get_cases(workspace))
+    cases.extend(_get_cases(bootstrap))
     cases.extend(_get_cases(integration))
 
     if (pattern := args.pattern) is not None:

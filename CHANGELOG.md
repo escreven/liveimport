@@ -1,3 +1,11 @@
+## [Unreleased]
+
+### Changed
+- Defer displaying reload reports when executing what are likely bootstrap
+  cells injected by the frontend until executing a non-bootstrap cell in the
+  same run.  This lets VSCode users see reload reports when debugging.
+
+
 ## [1.2.2] - 2025-12-02
 
 #### Changed
