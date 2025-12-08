@@ -371,6 +371,7 @@ def _track(module:ModuleType) -> _ModuleInfo:
 #
 # Parameters:
 #
+#     namespace    - target namespace
 #     journal      - extend this journal
 #     trackmodname - track this named module
 #     valuemodname - rebind value of or from this named module

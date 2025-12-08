@@ -240,7 +240,7 @@ def test_notebook(verbose:bool=False):
 
     dir = os.path.dirname(__file__)
     if not dir: dir = '.'
-    filename = os.path.dirname(__file__) + '/notebook.ipynb'
+    filename = dir + '/notebook.ipynb'
 
     config = Config()
     config.InteractiveShell.colors = 'NoColor'
