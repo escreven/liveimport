@@ -1,4 +1,4 @@
-## [Unreleased]
+## [1.2.3] - 2025-12-09
 
 ### Changed
 - Defer displaying reload reports when executing what are likely frontend
