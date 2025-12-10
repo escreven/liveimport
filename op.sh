@@ -127,6 +127,7 @@ function require_releasable_source {
     sourcefiles=$(find . -type f \( -name '*.py' -o -name '*.ipynb' \) -print)
     grep -qE "NORELEASE" $sourcefiles \
         && fail "Source has NORELEASE marks."
+    return 0
 }
 
 #
