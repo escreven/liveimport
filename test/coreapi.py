@@ -2,16 +2,15 @@
 # Core API tests.
 #
 
+import sys
+from typing import Any
 import liveimport
-import common
-from common import *
+from setup import *
+from setup_imports import *
+import setup_imports
 
 
-# globals() access means this can't be defined in setup
-def is_registered(modulename:str, name:str|None=None, asname:str|None=None,
-                  namespace:dict[str,Any]|None=None):
-    if namespace is None: namespace = globals()
-    return liveimport._is_registered(namespace,modulename,name,asname)
+is_registered = is_registered_fn(globals())
 
 
 def test_empty():
@@ -187,7 +186,7 @@ def test_general_reload():
     mod4 = sys.modules['mod4']
 
     # What should and should not have changed
-    assert common.mod2_public1 is not mod2.mod2_public1 #type:ignore
+    assert setup_imports.mod2_public1 is not mod2.mod2_public1 #type:ignore
     assert mod2_public1 is mod2.mod2_public1 #type:ignore
     assert mod2_public2_alias is mod2.mod2_public2 #type:ignore
     assert mod3_public1 is mod3.mod3_public1 #type:ignore

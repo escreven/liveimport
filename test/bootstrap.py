@@ -229,7 +229,11 @@ def _preamble(kernel:_Kernel):
     """
     Common prefix of all tests.
     """
-    kernel.run_cell("import liveimport\nfrom common import *\n")
+    kernel.run_cell("""
+        import liveimport
+        from setup import *
+        from setup_imports import *
+    """)
     kernel.run_cell("liveimport.auto_sync(grace=0.25)\n")
     kernel.run_cell("%%liveimport\nimport mod1\n")
     kernel.run_cell("mod1_tag = get_tag('mod1')\n")

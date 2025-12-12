@@ -5,12 +5,15 @@
 #
 
 from importlib.util import spec_from_loader
+import os
+import sys
 from IPython.core.error import UsageError
 import io
 from types import ModuleType
 import liveimport
 from liveimport._nbi import _LiveImportMagics
-from common import *
+from setup import *
+from setup_imports import *
 
 
 def test_magic_missing_shell():
