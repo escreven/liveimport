@@ -1,11 +1,11 @@
 #
 # A variety of import statements referencing the modules created in setup.py.
 # Test modules include "from setup_imports import *" to define names on which
-# test tests depend.
+# tests depend.
 #
 # IMPORTANT: The import from setup_imports must be after setup is imported.
 #
-# We need "#type: ignore" the imports because while the test files will exist
+# We need "#type: ignore" on the imports because while the test files will exist
 # when the imports execute, static code analyzers don't know that.
 #
 
