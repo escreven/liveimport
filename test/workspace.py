@@ -3,14 +3,11 @@
 #
 
 import liveimport
-from common import *
+from setup import *
+from setup_imports import *
 
 
-# globals() access means this can't be defined in setup
-def is_registered(modulename:str, name:str|None=None, asname:str|None=None,
-                  namespace:dict[str,Any]|None=None):
-    if namespace is None: namespace = globals()
-    return liveimport._is_registered(namespace,modulename,name,asname)
+is_registered = is_registered_fn(globals())
 
 
 #
@@ -66,7 +63,7 @@ def test_baseline():
     The default workspace includes the test file hierarchy, so touching all
     indirectly imported modules should be tracked.
     """
-    _test([TEMPDIR],
+    _test([root()],
           includes_A=True,
           includes_smod1=True,
           includes_amod1=True)
@@ -76,7 +73,7 @@ def test_two_subdirs():
     """
     A workspace consisting of the pkg and altpkg dirs should exclude module A.
     """
-    _test([TEMPDIR+"/pkg",TEMPDIR+"/altpkg"],
+    _test([root()+"/pkg",root()+"/altpkg"],
           includes_A=False,
           includes_smod1=True,
           includes_amod1=True)
@@ -87,7 +84,7 @@ def test_one_subdir():
     A workspace consisting of the pkg dir only should exclude module A and
     altpkg.amod1.
     """
-    _test([TEMPDIR+"/pkg"],
+    _test([root()+"/pkg"],
           includes_A=False,
           includes_smod1=True,
           includes_amod1=False)
@@ -107,7 +104,7 @@ def test_dir_does_not_exist():
     Workspace directories must exist.
     """
     try:
-        liveimport.workspace(TEMPDIR+"/dir_does_not_exist")
+        liveimport.workspace(root()+"/dir_does_not_exist")
         error = None
     except ValueError as ex:
         error = ex
@@ -120,7 +117,7 @@ def test_dir_is_not_a_dir():
     Workspace directories must actually be directories.
     """
     try:
-        liveimport.workspace(TEMPDIR+"/mod1.py")
+        liveimport.workspace(root()+"/mod1.py")
         error = None
     except ValueError as ex:
         error = ex

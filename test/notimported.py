@@ -4,7 +4,8 @@
 
 import liveimport
 import re
-from common import *
+from setup import *
+from setup_imports import *
 
 
 def expect_register_fail(importstmt:str, pattern:str):

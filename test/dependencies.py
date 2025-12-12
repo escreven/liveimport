@@ -3,8 +3,10 @@
 #
 
 import re
+import time
 import liveimport
-from common import *
+from setup import *
+from setup_imports import *
 
 #
 # The tests depend on the following dependency graph created in setup.

@@ -7,7 +7,7 @@ import sys
 import re
 import io
 import liveimport
-import common
+import setup
 
 # Modules defining tests:
 import coreapi
@@ -135,9 +135,9 @@ def main():
         cases = list(reversed(cases))
 
     if args.keeptemp:
-        common.keep_tempdir()
+        setup.keep_tempdir()
 
-    env = common.describe_environment()
+    env = setup.describe_environment()
 
     if args.check_python and env['python'] != args.check_python:
         raise RuntimeError("Unexpected Python version")
@@ -161,7 +161,7 @@ def main():
 
     for name, fn in cases:
         liveimport._clear_all_state()
-        liveimport.workspace(common.TEMPDIR)
+        liveimport.workspace(setup.root())
         print("    " + name.ljust(namewd,'.'),end='',flush=True)
         try:
             fn_finished = False

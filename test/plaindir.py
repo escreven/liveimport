@@ -3,15 +3,11 @@
 #
 
 import liveimport
-import common
-from common import *
+from setup import *
+from setup_imports import *
 
 
-# globals() access means this can't be defined in setup
-def is_registered(modulename:str, name:str|None=None, asname:str|None=None,
-                  namespace:dict[str,Any]|None=None):
-    if namespace is None: namespace = globals()
-    return liveimport._is_registered(namespace,modulename,name,asname)
+is_registered = is_registered_fn(globals())
 
 
 def test_single_dir():

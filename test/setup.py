@@ -2,6 +2,7 @@
 # Common support for testing liveimport in both scripts and notebooks.
 #
 
+from __future__ import annotations
 import atexit
 from contextlib import contextmanager
 import importlib.util
@@ -17,65 +18,100 @@ from liveimport import ReloadEvent
 from liveimport import _hash_state as hash_state
 from liveimport import _is_tracked as is_tracked
 
-"""
-_setup() generates the following file hierarchy in a temporary directory:
+__all__ = [
+    "modify_module", "restore_module", "revised_module",
+    "deleted_module",
+    "touch_module",
+    "is_registered_fn", "is_tracked", "hash_state",
+    "get_tag", "next_tag", "expect_tag",
+    "reload_list", "reload_clear", "reload_observe", "reload_expect",
+    "root", "keep_tempdir", "describe_environment",
+]
 
-    mod1.py
-    mod2.py
-    mod3.py  ; imports pkg.subpkg.ssmod2
-    mod4.py  ; has __all__ for mod4_public1 and mod4_public2
-    mod5.py  ; imported as hide_mod5
-    mod6.pt  ; imports A, pkg.smod1, altpkg.amod1
-    pkg/
-        __init__.py
-        smod1.py
-        smod2.py
-        smod3.py
-        smod4.py
-        subpkg/
-            __init__.py
-            ssmod1.py
-            ssmod2.py  ; has relative imports from ssmod1 and smod1
-    altpkg/
-        __init__.py
-        amod1.py
-    A.py  ; depends on C
-    B.py  ; depends on C, D, G
-    C.py  ; depends on E, F
-    D.py  ; depends on F
-    E.py  ; depends on A
-    F.py  ; depends on [none]
-    G.py  ; depends on [none]
-    subdir1/
-        mod7.py
-        nspkg/
-            mod8.py
-    subdir2/
-        mod9.py
-        nspkg/
-            mod10.py
 
-All the modules include "import re", "from math import nan", a _tag variable,
-some number of <basename>_public<n>() functions (default 3), some number of
-<basename>_private<n>() functions (default 3), a global variable
-"x='<modulename>'" and varying additional imports and __all__ declarations upon
-which tests rely.  <basename> is the part of a module's name past the last dot.
+# =============================================================================
+#                           HIERARCHY UNDER TEST
+#
+# When setup.py is imported, it creates a file hierarchy in a temporary
+# directory used by the various tests, including the notebook.
+#
+# All created modules include "import re", "from math import nan", a _tag
+# variable, some number of <basename>_public<n>() functions (default 3), some
+# number of <basename>_private<n>() functions (default 3), a global variable
+# "x='<modulename>'", and varying additional imports and __all__ declarations
+# upon which tests rely.  <basename> is the part of a module's name past the
+# last dot.
+#
+# On first load, a module's tag is the pair (<modulename>,1).  On a reload,
+# because the tag already exists in the loaded module, the tag becomes
+# (<modulename>,<prior>+1).  That enables us to determine if modules have
+# actually reloaded or not.
+#
+# See also setup_imports.py contains import statements referencing the
+# generated modules.  Test modules include "from setup_imports import *" to
+# define names on which test tests depend.
+# =============================================================================
 
-On first load, a module's tag is the pair (<modulename>,1).  On a reload,
-because the tag already exists in the loaded module, the tag becomes
-(<modulename>,<prior>+1).  That enables us to determine if modules have
-actually reloaded or not.
-"""
+def _hierarchy():
+
+    def dir(name:str,*children:_Node):
+        return _Node(kind='dir',name=name,children=children)
+
+    def file(name:str,**properties):
+        return _Node(kind='file',name=name,properties=properties)
+
+    return dir("",
+        file("mod1"),
+        file("mod2"),
+        file("mod3",imports=["import pkg.subpkg.ssmod2"]),
+        file("mod4",all=["mod4_public1","mod4_public2"]),
+        file("mod5"),
+        file("mod6",imports=["import A, pkg.smod1, altpkg.amod1"]),
+        dir("pkg",
+            file("__init__"),
+            file("smod1"),
+            file("smod2"),
+            file("smod3"),
+            file("smod4"),
+            dir("subpkg",
+                file("__init__"),
+                file("ssmod1"),
+                file("ssmod2",imports=[
+                        "from . ssmod1 import ssmod1_public1",
+                        "from .. smod1 import smod1_public1",
+                        "from .. import smod4"]))),
+        dir("altpkg",
+            file("__init__"),
+            file("amod1")),
+        file("A",imports=["import C"]),
+        file("B",imports=["import C; from D import nan; import G"]),
+        file("C",imports=["import E, F"]),
+        file("D",imports=["from F import *"]),
+        file("E",imports=["import A as littlea"]),
+        file("F"),
+        file("G"),
+        dir("subdir1",
+            file("mod7"),
+            dir("nspkg",
+                file("mod8"))),
+        dir("subdir2",
+            file("mod9"),
+            dir("nspkg",
+                file("mod10"))))
+
+#
+# setup.py must not be reloaed.
+#
 
 try:
-    TEMPDIR  #type:ignore
+    _ROOT  #type:ignore
     raise RuntimeError("Cannot reload test setup module")
 except NameError:
-    TEMPDIR = None
+    _ROOT = None
 
-_TEMPFILES:set[str] = set()
-
-_MODULE_DEFS:dict[str,dict[str,Any]] = dict()
+#
+# Source for a module.
+#
 
 _MODULE_TEMPLATE="""
 import re
@@ -90,19 +126,11 @@ x='{modulename}'
 {postscript}
 """
 
-#
-# Source for public or private module functions.
-#
-
 def _functions(basename:str, public:bool, count:int):
     prefix = '' if public else '_'
     tail = 'public' if public else 'private'
     return '\n'.join(f"def {prefix}{basename}_{tail}{n}(): pass"
                      for n in range(1,count+1))
-#
-# Source for a module.
-#
-
 def _module_src(modulename:str, public_count:int=3, private_count:int=3,
                 imports:list[str]=[], all:list[str]|None=None,
                 postscript:str=""):
@@ -121,102 +149,72 @@ def _module_src(modulename:str, public_count:int=3, private_count:int=3,
         postscript=textwrap.dedent(postscript))
 
 #
-# Create a module file.
+# The node tree is used both to create the temporary sub-directories and files,
+# but not destroy them.  That we clean up in case create() fails.  We maintain
+# a modulename->_Node dictionary so we can easily restore modules modified
+# during a test to their initial condition.
 #
 
-def _create_module(modulename:str, **kwargs):
+_TEMPFILES = []
+_TEMPDIRS = []
 
-    assert TEMPDIR is not None
+class _Node:
+    __slots__ = "kind", "name", "properties", "children", "path"
 
-    assert modulename not in _MODULE_DEFS
+    module_nodes:dict[str,_Node] = dict()
 
-    filename = TEMPDIR + "/" + modulename.replace('.','/') + ".py"
+    def __init__(self, kind:str, name:str,
+                 properties:dict[str,Any] = {},
+                 children:tuple[_Node,...] = ()):
+        if kind not in ('dir','file'):
+            raise ValueError(f"Bad node kind {kind}")
+        self.kind = kind
+        self.name = name
+        self.properties = properties
+        self.children = children
 
-    assert filename not in _TEMPFILES
+    def create(self, parent_path:str, module_prefix=''):
+        if self.kind == 'dir':
+            self.path = parent_path + '/' + self.name
+            if self.name != '':
+                os.mkdir(self.path)
+                _TEMPDIRS.append(self.path)
+                module_prefix += self.name + '.'
+            for child in self.children:
+                child.create(self.path, module_prefix)
+        else:
+            self.path = parent_path + '/' + self.name + '.py'
+            with open(self.path,"w") as f:
+                if self.name == '__init__':
+                    f.write("")
+                else:
+                    modulename = module_prefix + self.name
+                    _Node.module_nodes[modulename] = self
+                    f.write(_module_src(modulename,**self.properties))
+                _TEMPFILES.append(self.path)
 
-    with open(filename,"w") as f:
-        _TEMPFILES.add(filename)
-        _MODULE_DEFS[modulename] = kwargs
-        f.write(_module_src(modulename,**kwargs))
 
 #
-# Create __init__.py for a package.
-#
-
-def _create_package(packagename:str):
-
-    assert TEMPDIR is not None
-
-    dirname = TEMPDIR + "/" + packagename.replace('.','/') + "/"
-    filename = dirname + "__init__.py"
-
-    assert filename not in _TEMPFILES
-
-    with open(filename,"w") as f:
-        _TEMPFILES.add(filename)
-        f.write("")
-
-#
-# Create the temporary directory and file hierarchy.  Note the call to _setup()
-# from the top level just after the definition of _cleanup().
+# Create the temporary directory and file hierarchy.  There is a call to
+# _setup() from the top level just after the definition of _cleanup().
 #
 
 def _setup():
-    global TEMPDIR
+    global _ROOT
 
-    assert TEMPDIR is None
-    TEMPDIR = tempfile.mkdtemp(prefix="liveimport-test-")
+    assert _ROOT is None
+    _ROOT = tempfile.mkdtemp(prefix="liveimport-test-")
+    _TEMPDIRS.append(_ROOT)
 
     atexit.register(_cleanup)
 
-    assert TEMPDIR not in sys.path
-    sys.path.append(TEMPDIR)
+    assert _ROOT not in sys.path
+    sys.path.append(_ROOT)
 
-    os.mkdir(TEMPDIR + "/pkg")
-    os.mkdir(TEMPDIR + "/pkg/subpkg")
-    os.mkdir(TEMPDIR + "/altpkg")
-    os.mkdir(TEMPDIR + "/subdir1")
-    os.mkdir(TEMPDIR + "/subdir1/nspkg")
-    os.mkdir(TEMPDIR + "/subdir2")
-    os.mkdir(TEMPDIR + "/subdir2/nspkg")
+    _hierarchy().create(_ROOT)
 
-    _create_package("pkg")
-    _create_package("pkg.subpkg")
-    _create_package("altpkg")
-
-    _create_module("mod1")
-    _create_module("mod2")
-    _create_module("mod3",imports=["import pkg.subpkg.ssmod2"])
-    _create_module("mod4",all=["mod4_public1","mod4_public2"])
-    _create_module("mod5")
-    _create_module("mod6",imports=["import A, pkg.smod1, altpkg.amod1"])
-
-    _create_module("pkg.smod1")
-    _create_module("pkg.smod2")
-    _create_module("pkg.smod3")
-    _create_module("pkg.smod4")
-    _create_module("altpkg.amod1")
-
-    _create_module("pkg.subpkg.ssmod1")
-    _create_module("pkg.subpkg.ssmod2",imports=[
-                   "from . ssmod1 import ssmod1_public1",
-                   "from .. smod1 import smod1_public1",
-                   "from .. import smod4"])
-
-    _create_module("A",imports=["import C"])
-    _create_module("B",imports=["import C; from D import nan; import G"])
-    _create_module("C",imports=["import E, F"])
-    _create_module("D",imports=["from F import *"])
-    _create_module("E",imports=["import A as littlea"])
-    _create_module("F")
-    _create_module("G")
-    _create_module("subdir1.mod7")
-    _create_module("subdir1.nspkg.mod8")
-    _create_module("subdir2.mod9")
-    _create_module("subdir2.nspkg.mod10")
-
-    subdir1_path = TEMPDIR + "/subdir1"
-    subdir2_path = TEMPDIR + "/subdir2"
+    subdir1_path = _ROOT + "/subdir1"
+    subdir2_path = _ROOT + "/subdir2"
 
     sys.path = [ subdir1_path, subdir2_path ] + sys.path
 
@@ -227,9 +225,7 @@ def _setup():
 _KEEP_TEMPDIR = False
 
 def _cleanup():
-    global TEMPDIR, _TEMPFILES
-
-    assert TEMPDIR is not None
+    assert _ROOT is not None
 
     if _KEEP_TEMPDIR:
         return
@@ -258,43 +254,20 @@ def _cleanup():
     for filename in _TEMPFILES:
         safe_remove(filename)
 
-    for tail in ["/pkg/subpkg", "/pkg", "/altpkg",
-                 "/subdir1/nspkg", "/subdir1",
-                 "/subdir2/nspkg", "/subdir2", "" ]:
-        dir = TEMPDIR + tail
-        safe_remove_pycache(dir)
-        safe_rmdir(dir)
+    for subdir in reversed(_TEMPDIRS):
+        safe_remove_pycache(subdir)
+        safe_rmdir(subdir)
 
 #
-# Execute setup, including imports on which the tests will depend.  We need
-# "#type: ignore" the imports because while they test files will exist when the
-# imports execute, static code analyzers don't know that.
+# Execute setup.
 #
 
 _setup()
 
-import mod1 #type:ignore
-from mod2 import mod2_public1, mod2_public2 as mod2_public2_alias #type:ignore
-from mod3 import * #type:ignore
-from mod4 import * #type:ignore
-import mod5 as hide_mod5 #type:ignore
-import mod6 #type:ignore
-import pkg.smod1 #type:ignore
-from pkg.smod2 import smod2_public1 #type:ignore
-from pkg import smod3 #type:ignore
-import pkg.smod4 as hide_smod4 #type:ignore
-import pkg.subpkg.ssmod1 #type:ignore
-import pkg.subpkg.ssmod2 #type:ignore
-from pkg.subpkg.ssmod1 import ssmod1_public1 #type:ignore
-import pkg.subpkg #type:ignore
-import A, B, C, D, E, F, G #type:ignore
-from altpkg import amod1 #type:ignore
-import subdir1 #type:ignore
-from subdir1 import mod7 #type:ignore
-from subdir2.mod9 import mod9_public1 #type:ignore
-import nspkg #type:ignore
-from nspkg import mod8 #type: ignore
-from nspkg.mod10 import mod10_public1 #type: ignore
+
+# =============================================================================
+#                                  MUTATION
+# =============================================================================
 
 #
 # Given a module name, return its source file.
@@ -312,7 +285,7 @@ def _module_filename(modulename:str) -> str:
 
 def modify_module(modulename:str, sleep:float=0.05, **kwargs):
     filename = _module_filename(modulename)
-    olddef = _MODULE_DEFS[modulename]
+    olddef = _Node.module_nodes[modulename].properties
     with open(filename,'w') as f:
         newdef = olddef.copy()
         newdef.update(kwargs)
@@ -325,7 +298,7 @@ def modify_module(modulename:str, sleep:float=0.05, **kwargs):
 
 def restore_module(modulename:str, sleep:float=0.05):
     filename = _module_filename(modulename)
-    olddef = _MODULE_DEFS[modulename]
+    olddef = _Node.module_nodes[modulename].properties
     with open(filename,'w') as f:
         f.write(_module_src(modulename,**olddef))
     time.sleep(sleep)
@@ -350,7 +323,7 @@ def revised_module(modulename:str, sleep:float=0.05, **kwargs):
 # can easily restore it with its original mtime.)
 #
 
-def delete_module(modulename:str):
+def _delete_module(modulename:str):
     filename = _module_filename(modulename)
     if "liveimport-test-" not in filename:
         raise RuntimeError("UNSAFE RENAME: " + filename)
@@ -360,7 +333,7 @@ def delete_module(modulename:str):
 # Undelete module.
 #
 
-def undelete_module(modulename:str):
+def _undelete_module(modulename:str):
     filename = _module_filename(modulename)
     os.rename(filename + '.DELETED',filename)
     importlib.invalidate_caches()
@@ -376,9 +349,9 @@ def undelete_module(modulename:str):
 
 @contextmanager
 def deleted_module(modulename:str):
-    delete_module(modulename)
+    _delete_module(modulename)
     yield
-    undelete_module(modulename)
+    _undelete_module(modulename)
 
 #
 # Change a module's modification time to the current time, sleeping for the
@@ -388,6 +361,25 @@ def deleted_module(modulename:str):
 def touch_module(modulename:str, sleep:float=0.05):
     os.utime(_module_filename(modulename))
     time.sleep(sleep)
+
+
+
+# =============================================================================
+#                                EXAMINATION
+# =============================================================================
+
+#
+# Many tests want to determine if an import is registered in the test module's
+# global namespace.  Because that requires access to globals(), we provide a
+# common implementation as a closure.
+#
+
+def is_registered_fn(module_globals:dict[str,Any]):
+    def body(modulename:str, name:str|None=None, asname:str|None=None,
+             namespace:dict[str,Any]|None=None):
+        if namespace is None: namespace = module_globals
+        return liveimport._is_registered(namespace,modulename,name,asname)
+    return body
 
 #
 # For verifying reloads.  Typical use:
@@ -445,6 +437,18 @@ def reload_expect(*expected:str):
         raise RuntimeError("Unexpected reload report(s)s")
 
 
+# =============================================================================
+#                               ADMINISTRATION
+# =============================================================================
+
+#
+# Return the root of the hierarchy.
+#
+
+def root():
+    assert _ROOT
+    return _ROOT
+
 #
 # Do not remove the temporary directories and files on exit.
 #
@@ -452,7 +456,6 @@ def reload_expect(*expected:str):
 def keep_tempdir():
     global _KEEP_TEMPDIR
     _KEEP_TEMPDIR = True
-
 
 #
 # Print a description of the test runtime environment.
@@ -468,7 +471,7 @@ def describe_environment() -> dict[str,str|None]:
     ipython_version = _pkg_version("IPython")
     notebook_version = _pkg_version("notebook")
 
-    print(f"Temporary directory is {TEMPDIR}")
+    print(f"Temporary directory is {_ROOT}")
 
     print(f"Python {sys.version}")
 
