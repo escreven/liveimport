@@ -33,23 +33,33 @@ __all__ = [
 #                           HIERARCHY UNDER TEST
 #
 # When setup.py is imported, it creates a file hierarchy in a temporary
-# directory used by the various tests, including the notebook.
+# directory used by the various tests, including the notebook.  Each module
+# has source
 #
-# All created modules include "import re", "from math import nan", a _tag
-# variable, some number of <basename>_public<n>() functions (default 3), some
-# number of <basename>_private<n>() functions (default 3), a global variable
-# "x='<modulename>'", and varying additional imports and __all__ declarations
-# upon which tests rely.  <basename> is the part of a module's name past the
-# last dot.
+#     import re
+#     from math import nan
+#     <imports>                             -- optional
+#     <alldecl>                             -- optional
+#     def <basename>_public<i>(): pass      -- i in [1..3] by default
+#     def _<basename>_private<i>(): pass    -- i in [1..3] by default
+#     try: _tag = (_tag[0],_tag[1]+1)
+#     except: _tag = ('<basename>',1)
+#     x='<basename>'
+#     <postscript>                          -- optional
 #
-# On first load, a module's tag is the pair (<modulename>,1).  On a reload,
+# <basename> is the part of a module's name past the last dot.  The contents of
+# the optional sections are the values of _Node properties "imports", "all",
+# and "postscript".  Properties "public_count" and "private_count" respectively
+# determine the number of public and private functions.
+#
+# On first load, a module's tag is the pair ('<basename>',1).  On a reload,
 # because the tag already exists in the loaded module, the tag becomes
 # (<modulename>,<prior>+1).  That enables us to determine if modules have
 # actually reloaded or not.
 #
-# See also setup_imports.py contains import statements referencing the
+# See also setup_imports.py which contains import statements referencing the
 # generated modules.  Test modules include "from setup_imports import *" to
-# define names on which test tests depend.
+# define names on which the tests depend.
 # =============================================================================
 
 def _hierarchy():
@@ -100,7 +110,7 @@ def _hierarchy():
                 file("mod10"))))
 
 #
-# setup.py must not be reloaed.
+# setup.py must not be reloaded.
 #
 
 try:
@@ -131,6 +141,7 @@ def _functions(basename:str, public:bool, count:int):
     tail = 'public' if public else 'private'
     return '\n'.join(f"def {prefix}{basename}_{tail}{n}(): pass"
                      for n in range(1,count+1))
+
 def _module_src(modulename:str, public_count:int=3, private_count:int=3,
                 imports:list[str]=[], all:list[str]|None=None,
                 postscript:str=""):
@@ -149,9 +160,10 @@ def _module_src(modulename:str, public_count:int=3, private_count:int=3,
         postscript=textwrap.dedent(postscript))
 
 #
-# The node tree is used both to create the temporary sub-directories and files,
-# but not destroy them.  That we clean up in case create() fails.  We maintain
-# a modulename->_Node dictionary so we can easily restore modules modified
+# The node tree is used to create the temporary sub-directories and files, but
+# not destroy them.  Instead, we record created directories and files in
+# _TEMPFILES and _TEMPDIRS so we can clean up even if tree creation fails.  We
+# also maintain a modulename->_Node dictionary used to restore modules modified
 # during a test to their initial condition.
 #
 
@@ -195,8 +207,9 @@ class _Node:
 
 
 #
-# Create the temporary directory and file hierarchy.  There is a call to
-# _setup() from the top level just after the definition of _cleanup().
+# Create the temporary directory and file hierarchy, and put them in sys.path.
+# There is a call to _setup() from the top level just after the definition of
+# _cleanup().
 #
 
 def _setup():
@@ -371,7 +384,7 @@ def touch_module(modulename:str, sleep:float=0.05):
 #
 # Many tests want to determine if an import is registered in the test module's
 # global namespace.  Because that requires access to globals(), we provide a
-# common implementation as a closure.
+# common implementation via a closure.
 #
 
 def is_registered_fn(module_globals:dict[str,Any]):
@@ -387,11 +400,6 @@ def is_registered_fn(module_globals:dict[str,Any]):
 #       tag = get_tag("mod1")
 #       ... do something that should cause mod1 to reload ...
 #       expect_tag(next_tag(tag))
-#
-# Generated modules include a tag variable.  On first load, the tag is the pair
-# (<modulename>,1).  On a reload after a rewrite or touch, because tag already
-# exists in the loaded module, the tag becomes (<modulename>,<prior>+1).  That
-# enables us to determine if modules are reloaded or not.
 #
 
 def get_tag(modulename:str):
