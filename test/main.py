@@ -87,7 +87,7 @@ def main():
         description="Test LiveImport")
 
     parser.add_argument("pattern", nargs='?', default=None,
-        help="Only run tests containing this regex")
+        help="Only run tests with names containing this regex")
 
     parser.add_argument("-keeptemp", action="store_true",
         help="Keep the temporary directory created for testing")

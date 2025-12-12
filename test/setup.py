@@ -38,14 +38,14 @@ __all__ = [
 #
 #     import re
 #     from math import nan
-#     <imports>                             -- optional
-#     <alldecl>                             -- optional
+#     <imports>                             -- empty by default
+#     <alldecl>                             -- empty by default
 #     def <basename>_public<i>(): pass      -- i in [1..3] by default
 #     def _<basename>_private<i>(): pass    -- i in [1..3] by default
 #     try: _tag = (_tag[0],_tag[1]+1)
 #     except: _tag = ('<basename>',1)
 #     x='<basename>'
-#     <postscript>                          -- optional
+#     <postscript>                          -- empty by default
 #
 # <basename> is the part of a module's name past the last dot.  The contents of
 # the optional sections are the values of _Node properties "imports", "all",
