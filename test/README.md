@@ -58,7 +58,7 @@ Special cases:
 
 ### Other
 
-| File | Functional Area
+| File | Description
 | - | -
 | [notebook.ipynb](notebook.ipynb) | Notebook run by `integration.py` as described above
 | [dependencies.gv](dependencies.gv) | Graphviz model of module dependencies used by `dependencies.py`
