@@ -5,8 +5,7 @@
 # page as-is.  It doesn't correct relative GitHub links, so links in README.md
 # must be absolute.
 #
-# op.sh runs this script before declaring a release or deploying the
-# [Test]PyPI.
+# op.sh runs this script before declaring a release or deploying to [Test]PyPI.
 #
 
 import re

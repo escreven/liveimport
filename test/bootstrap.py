@@ -7,20 +7,20 @@ from jupyter_client import KernelManager  #type:ignore
 
 #
 # This module tests LiveImport's handling of bootstrap cells.  A bootstrap cell
-# is non-user cell frontends run in the kernel for its own purposes, usually
+# is non-user cell frontends run in the kernel for their own purposes, usually
 # related to configuring the environment in some way.  VSCode, for example,
 # imports a debugger module in a bootstrap cell before running a user cell in
 # debug mode.
 #
-# LiveImport judges a cell to be bootstrap its store_history option is False.
-# Note a frontend can, and probably should, use the silent=True option when
-# running bootstrap cells because that bypasses run_cell event handlers
+# LiveImport judges a cell to be bootstrap if its store_history option is
+# False.  Note a frontend can, and probably should, use the silent=True option
+# when running bootstrap cells because that bypasses run_cell event handlers
 # altogether -- unfortunately VSCode at least does not in its debugging
 # support.
 #
 # While it would be simpler to use an in-process IPython shell here, we start a
 # headless kernel instead to avoid any potential contamination of other tests
-# from IPython state.
+# through IPython state.
 #
 
 _TIMEOUT = 5.0
@@ -111,9 +111,9 @@ class _Kernel:
 
             #
             # Dispatch the message.  There are only three things we care about:
-            # receiving stdout (the cell printed something) or stderr text,
-            # receiving markdown text (reloads are markdown), and when the
-            # kernel becomes idle meaning it is done running the cell.
+            # receiving stdout (the cell printed something), receiving markdown
+            # text (reloads are markdown), and when the kernel becomes idle
+            # meaning it is done running the cell.
             #
 
             mtype   = msg['msg_type']
@@ -190,10 +190,9 @@ class _Kernel:
             pass
 
 #
-# Code coverage support.  Each test creates a new IPython kernel running
-# in its own process.  Thus, each kernel must start coverage and save the
-# resulting data to generate coverage reports.  Each kernel must
-# write the data to a file specific to each test.
+# Code coverage support.  Each test creates a new IPython kernel running in its
+# own process.  Thus, each kernel must start coverage and save the resulting
+# data a file specific to that test to generate coverage reports.
 #
 
 _COVERAGE_START = """

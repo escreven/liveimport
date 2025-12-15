@@ -13,7 +13,7 @@ import coverage
 #
 # This module tests LiveImport's notebook integration.  It runs the cells of
 # notebook.ipynb which must be in the same directory as this and the other test
-# modules, including common.py.
+# modules, including setup.py and setup_imports.py.
 #
 # Function test_notebook uses this module's __file__ attribute (which it must
 # have) to locate the test notebook, and set the notebook's working directory.

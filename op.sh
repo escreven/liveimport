@@ -119,7 +119,7 @@ function require_releasable_version {
 
 #
 # Succeed iff the source code does not contain the string NORELEASE.  This way
-# we can mark temporary modifications to prevent their accidental released.
+# we can mark temporary modifications to prevent their accidental release.
 #
 
 function require_releasable_source {
@@ -199,7 +199,7 @@ function require_git_clean {
 
 #
 # Require the top-level README.md to be in a deployable state.  For now that
-# just means only absolute links.
+# just means it contains no relative links.
 #
 
 function require_deployable_README {

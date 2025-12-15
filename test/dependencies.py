@@ -19,8 +19,8 @@ from setup_imports import *
 #     F -> [none]
 #     G -> [none]
 #
-# There are two modes of testing: direct=True, which registers from each
-# module in alphabetical order, and direct=False, only registers "import
+# There are two modes of testing: direct=True, which registers an import of all
+# modules in alphabetical order, and direct=False, which only registers "import
 # B".
 #
 # There is a cycle A->C->E->A.  With direct mode, because imports from E are
