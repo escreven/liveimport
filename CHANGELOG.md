@@ -1,3 +1,9 @@
+## Unreleased
+
+#### Fixed
+- `register()` parameter `allow_other_statements` documented.
+
+
 ## [1.2.3] - 2025-12-09
 
 #### Changed
