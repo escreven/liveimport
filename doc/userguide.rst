@@ -183,8 +183,8 @@ registrations when the cell is run.
 Best Practice
 -------------
 
-The recommended best practice is for notebooks to have one ``%%liveimport``
-cell, and that cell should include option ``--clear``.  In the case of the
+The recommended practice is for notebooks to have one ``%%liveimport`` cell,
+and that cell should include option ``--clear``.  In the case of the
 **Overview** example, if you are hiding cell magic, that one cell would be
 
   .. code:: python

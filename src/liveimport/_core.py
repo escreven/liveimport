@@ -432,8 +432,8 @@ def register(namespace:dict[str,Any], importstmts:str,
         of ``globals()``.
 
     :param importstmts: Python code consisting of zero or more import
-        statements and nothing else.  The application should have already
-        executed these or equivalent imports.
+        statements.  The application should have already executed these or
+        equivalent imports.
 
     :param package: Context for interpreting relative import statements.  When
         given, `package` is usually the caller's immediate parent package,
@@ -445,13 +445,18 @@ def register(namespace:dict[str,Any], importstmts:str,
     :param clear: If and only if true, discard all prior registrations
         targeting `namespace` before registering the given import statements.
 
+    :param allow_other_statements: If true, non-import statements are allowed
+        in `importstmts` and ignored.  Otherwise, only import statements are
+        allowed.
+
     :raises SyntaxError: `importstmts` is not syntactically valid.
 
     :raises ImportError: `importstmts` includes an improper relative import.
 
-    :raises ValueError: `importstmts` includes non-import statements, a
-        referenced module is not loaded or has no associated source file, or an
-        included name does not already exist.
+    :raises ValueError: `importstmts` includes a non-import statement and
+        `allow_other_statements` is false, a referenced module is not loaded or
+        has no associated source file, or an included name does not already
+        exist.
 
     :raises ModuleError: The content of a module referenced by an import
         statement is erroneous.
