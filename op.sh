@@ -251,6 +251,15 @@ function clean_coverage {
 }
 
 #
+# Build the documentation.
+#
+
+function build_doc {
+    make -C doc html
+    echo "Documentation root is $(pwd)/doc/_build/html/index.html"
+}
+
+#
 # Build the wheel and sdist files.  The current project version must be
 # different than any released version.  build_dist removes the left-over
 # egg-info directory.  Hopefully build will stop leaving it behind one day.
@@ -419,7 +428,7 @@ function act {
             report_coverage
             ;;
         build-doc)
-            make -C doc html
+            build_doc
             ;;
         build-dist)
             build_dist

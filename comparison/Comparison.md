@@ -70,8 +70,7 @@ Markdown blocks such as
 ```
 
 While you can disable notifications, they help avoid wasting time when
-unexpected reloads happen, or expected reloads do not.  Autoreload is
-silent.
+unexpected reloads happen, or expected reloads do not.
 
 ### Explore
 

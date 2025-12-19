@@ -88,10 +88,10 @@ Reloaded alpha modified 22 seconds ago
 Reloaded beta because alpha reloaded
 ```
 
-The autoreload notebook included no such notification.  When you are working on
-a notebook, being suprised by a reload — or being surprised by a *non*-reload —
-can waste time.  If you don't like LiveImport's notification blocks, you can
-turn them off by calling `liveimport.auto_sync(report=False)`.
+When you are working on a notebook, being suprised by a reload — or being
+surprised by a *non*-reload — can waste time.  If you don't like LiveImport's
+notification blocks, you can turn them off by calling
+`liveimport.auto_sync(report=False)`.
 
 Second, LiveImport didn't just reload `alpha`, it reloaded `beta`.  Why?
 Because `beta` imports `alpha_tag`, `alpha_fn()`, and `Alpha` from `alpha`.

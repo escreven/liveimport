@@ -74,8 +74,7 @@ Markdown blocks such as
     Reloaded simulator because symcode reloaded
 
 While you can disable notifications, they help avoid wasting time when
-unexpected reloads happen, or expected reloads do not.  Autoreload is
-silent.
+unexpected reloads happen, or expected reloads do not.
 
 Explore
 ~~~~~~~
