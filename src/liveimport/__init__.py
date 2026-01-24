@@ -6,7 +6,7 @@ See `the user guide
 
 from __future__ import annotations
 
-__version__ = "1.2.4.dev1"
+__version__ = "1.2.4"
 
 __all__ = ("register", "sync", "auto_sync", "hidden_cell_magic",
            "ReloadEvent", "ModuleError", "workspace")

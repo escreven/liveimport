@@ -1,7 +1,10 @@
 ## Unreleased
 
+## [1.2.4] - 2026-01-23
+
 #### Fixed
 - `register()` parameter `allow_other_statements` documented.
+- Avoid recording multiple dependencies between the same pair of modules.
 
 
 ## [1.2.3] - 2025-12-09
