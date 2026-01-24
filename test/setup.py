@@ -430,8 +430,7 @@ def reload_observe(event:ReloadEvent):
 
 def reload_expect(*expected:str):
     reports = [ event.module for event in reload_list ]
-    if (len(reports) != len(expected) or
-        any(reports[i] != expected[i] for i in range(0,len(expected)))):
+    if (set(reports) != set(expected)):
         print("UNEXPECTED RELOAD REPORT(S)")
         print()
         print("Expected")

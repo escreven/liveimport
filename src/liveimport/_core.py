@@ -291,22 +291,22 @@ class _ModuleInfo:
         with open(self.file) as f:
             source = f.read()
 
-        result:list[str] = []
+        result:set[str] = set()
 
         try:
             for stmt in ast.parse(source,self.file).body:
                 if isinstance(stmt,ast.Import):
                     for alias in stmt.names:
-                        result.append(alias.name)
+                        result.add(alias.name)
                 elif isinstance(stmt,ast.ImportFrom):
                     module = _absolute_module(stmt,self.parent,self.file)
-                    result.append(module)
+                    result.add(module)
                     for alias in stmt.names:
-                        result.append(module + '.' + alias.name)
+                        result.add(module + '.' + alias.name)
         except BaseException as ex:
             raise ModuleError(self.module.__name__,"analysis") from ex
 
-        self.dependencies = result
+        self.dependencies = list(result)
 
 _MODULE_TABLE:dict[str,_ModuleInfo] = dict()
 
