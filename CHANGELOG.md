@@ -4,7 +4,7 @@
 
 #### Fixed
 - `register()` parameter `allow_other_statements` documented.
-- Avoid recording multiple dependencies between the same pair of modules.
+- Avoid recording multiple dependencies between a given pair of modules.
 
 
 ## [1.2.3] - 2025-12-09
