@@ -6,7 +6,7 @@ import re
 from liveimport import __version__
 
 project = 'LiveImport'
-copyright = '2025, Edward Screven'
+copyright = '2025-2026, Edward Screven'
 author = 'Edward Screven'
 
 version = re.match(r"\d+\.\d+",__version__)[0]  #type:ignore
