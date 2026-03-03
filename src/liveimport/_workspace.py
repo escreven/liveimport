@@ -1,14 +1,26 @@
+import os
+from os import PathLike
 from pathlib import Path
+
+
+#
+# Path.absolute() doesn't collapse /../ components (but does collapse /./
+# components -- strange.)
+#
+
+def _absolute(path:str|PathLike) -> Path:
+    return Path(os.path.abspath(path))
+
 
 #
 # The workspace is a possibly empty list of directory paths.  We use Path
-# objects so we can use is_relative_to(), and we normalize using absolute()
+# objects so we can use is_relative_to(), and we normalize using _absolute()
 # instead of resolve() because we don't want to follow symbolic links -- most
 # likely what a user expects.
 #
 
 if "_WORKSPACE" not in globals():
-    _WORKSPACE:list[Path] = [ Path(".").absolute() ]
+    _WORKSPACE:list[Path] = [ _absolute(".") ]
 
 #
 # Return true iff the named file is in the workspace.
@@ -16,7 +28,7 @@ if "_WORKSPACE" not in globals():
 
 def _in_workspace(file:str) -> bool:
 
-    filepath = Path(file).absolute()
+    filepath = _absolute(file)
 
     for dirpath in _WORKSPACE:
         if filepath.is_relative_to(dirpath):
@@ -25,21 +37,21 @@ def _in_workspace(file:str) -> bool:
     return False
 
 
-def workspace(*directories:str) -> None:
+def workspace(*directories:str|PathLike) -> None:
     """
     Define the workspace, a set of directories.
 
-    LiveImport tracks modules that are either imported by a registered import
+    LiveImport tracks modules that either are imported by a registered import
     statement, or are imported by a tracked module and have a source file in
-    the workspace.  A source file is in the workspace if it's under a workspace
-    directory.
+    the workspace.  A source file is in the workspace if and only if it's under
+    a workspace directory.
 
     The default workspace is the current working directory when the LiveImport
     module is imported.  Thus, when LiveImport is used in a notebook, the
     workspace is the directory containing the notebook.
 
-    :param directories: Zero or more path strings.  Each path must identify an
-        existing directory.
+    :param directories: Zero or more path strings or path-like objects.  Each
+        path must identify an existing directory.
 
     :raises ValueError: One of the specified paths does not exist or
         exists but is not a directory.
@@ -74,7 +86,7 @@ def workspace(*directories:str) -> None:
 
     for dir in directories:
 
-        path = Path(dir).absolute()
+        path = _absolute(dir)
 
         if not path.exists():
             raise ValueError(f"Path {path} does not exist")
@@ -84,7 +96,7 @@ def workspace(*directories:str) -> None:
 
         workspace.append(path)
 
-    _WORKSPACE = workspace
+    _WORKSPACE[:] = workspace
 
     # Local import to break circular import dependency
     from ._core import _track_new_indirects

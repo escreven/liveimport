@@ -1,5 +1,14 @@
 ## Unreleased
 
+## [1.2.5] - 2026-03-02
+
+#### Added
+- `workspace()` now accepts path-like objects as well as strings.
+
+#### Fixed
+- `workspace()` now collapses `/../` path components enabling relative
+  workspace directory paths.
+
 ## [1.2.4] - 2026-01-23
 
 #### Fixed
