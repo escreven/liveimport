@@ -54,7 +54,7 @@ __all__ = [
 #
 # On first load, a module's tag is the pair ('<basename>',1).  On a reload,
 # because the tag already exists in the loaded module, the tag becomes
-# (<modulename>,<prior>+1).  That enables us to determine if modules have
+# ('<basename>',<prior>+1).  That enables us to determine if modules have
 # actually reloaded or not.
 #
 # See also setup_imports.py which contains import statements referencing the
