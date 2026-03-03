@@ -2,6 +2,9 @@
 # Workspace tests.
 #
 
+from os import PathLike
+from pathlib import Path
+
 import liveimport
 from setup import *
 from setup_imports import *
@@ -18,7 +21,7 @@ is_registered = is_registered_fn(globals())
 # amod1 are in the workspace.
 #
 
-def _test(directories:list[str],
+def _test(directories:list[str|PathLike],
           includes_A=True,
           includes_smod1=True,
           includes_amod1=True):
@@ -89,6 +92,7 @@ def test_one_subdir():
           includes_smod1=True,
           includes_amod1=False)
 
+
 def test_no_dirs():
     """
     An empty workspace should exclude module A, pkg.smod1, and altpkg.amod1.
@@ -158,3 +162,35 @@ def test_direct_imports_unaffected():
 
     expect_tag("A",            next_A_tag    )
     expect_tag("pkg.smod1",    next_smod1_tag)
+
+
+def test_mid_dotdot():
+    """
+    Workspace directory "<name>/.." segments should be collapsed in the middle
+    of a path.
+    """
+    _test([root()+"/pkg/../altpkg"],
+          includes_A=False,
+          includes_smod1=False,
+          includes_amod1=True)
+
+
+def test_end_dotdot():
+    """
+    Workspace directory "<name>/.." segments should be collapsed at end of a
+    path.
+    """
+    _test([root()+"/pkg/.."],
+          includes_A=True,
+          includes_smod1=True,
+          includes_amod1=True)
+
+
+def test_path_subdirs():
+    """
+    Workspace directories can be specified as Path objects.
+    """
+    _test([Path(root()+"/pkg"),Path(root()+"/altpkg")],
+          includes_A=False,
+          includes_smod1=True,
+          includes_amod1=True)
