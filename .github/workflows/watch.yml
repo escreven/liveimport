@@ -1,0 +1,171 @@
+#
+# Run LiveImport regression tests when there is a new IPython or notebook
+# release.  Because there is no way to trigger a workflow when a python package
+# is released, we poll pypi.org every six hours for the lastest versions of
+# both, using the action cache as a lightweight persistent store to know
+# whether or not we have already successfully tested a given new version.
+#
+# If we find a new version (or versions), we run the LiveImport test suite on
+# Linux, MacOs, and Windows with Python 3.11-3.14.  Note we don't test Python
+# 3.10 even though 3.10 is supported by LiveImport; the latest versions of
+# IPython require 3.11 or greater.
+#
+# We also use the same canary strategy as test.yml -- no need to test the full
+# matrix if tests on Linux with Python 3.12 fail.
+#
+
+name: IPython/Notebook Release Watch
+
+on:
+  schedule:
+    - cron: '37 */6 * * *'   # every 6 hours
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Run even if IPython/Notebook versions have not changed"
+        type: boolean
+        default: false
+
+jobs:
+  detect:
+    name: Detect latest IPython/Notebook on PyPI
+    runs-on: ubuntu-latest
+    outputs:
+      ipython_version: ${{ steps.versions.outputs.ipython }}
+      notebook_version: ${{ steps.versions.outputs.notebook }}
+      cache_hit: ${{ steps.seen.outputs.cache-hit }}
+      should_run: ${{ steps.decision.outputs.should_run }}
+    steps:
+      - name: Fetch latest versions from PyPI
+        id: versions
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, json, urllib.request
+          output_path = os.environ["GITHUB_OUTPUT"]
+          def latest(pkg: str) -> str:
+              url = f"https://pypi.org/pypi/{pkg}/json"
+              with urllib.request.urlopen(url, timeout=30) as r:
+                  return json.load(r)["info"]["version"]
+          ipy = latest("ipython")
+          nb  = latest("notebook")
+          with open(output_path, "a", encoding="utf-8") as f:
+              f.write(f"ipython={ipy}\n")
+              f.write(f"notebook={nb}\n")
+          print(f"Latest: ipython=={ipy} notebook=={nb}")
+          PY
+      #
+      # If there is a cache entry for the key formed from the latest ipython
+      # and notebook version numbers, then we know we have already successfully
+      # tested that combination.
+      #
+      - name: Determine if versions already tested
+        id: seen
+        uses: actions/cache/restore@v4
+        with:
+          path: .pypi-trigger
+          key: pypi-ipython-${{ steps.versions.outputs.ipython }}-notebook-${{ steps.versions.outputs.notebook }}
+
+      - name: Decide whether to run tests
+        id: decision
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == workflow_dispatch && \
+                "${{ inputs.force }}" == true ]]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "${{ steps.seen.outputs.cache-hit }}" == true ]]; then
+            echo "No new versions detected; skipping."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  canary:
+    needs: detect
+    if: needs.detect.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies (latest IPython/Notebook)
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          pip install "ipython==${{ needs.detect.outputs.ipython_version }}" \
+                      "notebook==${{ needs.detect.outputs.notebook_version }}" \
+                      coverage
+          pip install -e .
+
+      - name: Run Tests
+        shell: bash
+        run: |
+          coverage run \
+              --data-file .coverage.main \
+              --include 'src/liveimport/*.py' test/main.py -failstop
+          coverage combine
+          coverage report --include=src/liveimport/*.py --fail-under=100
+
+  full:
+    name: Full Matrix
+    needs: [detect, canary]
+    if: needs.detect.outputs.should_run == 'true'
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.11', '3.12', '3.13', '3.14']
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install Dependencies (latest IPython/Notebook)
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          pip install "ipython==${{ needs.detect.outputs.ipython_version }}" \
+                      "notebook==${{ needs.detect.outputs.notebook_version }}" \
+                      coverage
+          pip install -e .
+
+      - name: Run Tests
+        shell: bash
+        run: |
+          coverage run \
+              --data-file .coverage.main \
+              --include 'src/liveimport/*.py' test/main.py -failstop
+          coverage combine
+          coverage report --include=src/liveimport/*.py --fail-under=100
+
+  mark_seen:
+    name: Mark versions as successfully tested
+    needs: [detect, canary, full]
+    if: ${{ always() && needs.detect.outputs.should_run == 'true' && needs.canary.result == 'success' && needs.full.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Save tested version pair
+        shell: bash
+        run: |
+          mkdir -p .pypi-trigger
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > .pypi-trigger/first_seen_utc.txt
+
+      - name: Persist tested versions
+        uses: actions/cache/save@v4
+        with:
+          path: .pypi-trigger
+          key: pypi-ipython-${{ needs.detect.outputs.ipython_version }}-notebook-${{ needs.detect.outputs.notebook_version }}
