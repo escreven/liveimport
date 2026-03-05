@@ -110,7 +110,8 @@ jobs:
           pip install \
             "ipython==${{ needs.detect.outputs.ipython_version }}" \
             "notebook==${{ needs.detect.outputs.notebook_version }}" \
-            "liveimport==${{ needs.detect.outputs.liveimport_version }}"
+            "liveimport==${{ needs.detect.outputs.liveimport_version }}" \
+            coverage
 
       - name: Run Tests
         shell: bash
@@ -147,7 +148,8 @@ jobs:
           pip install \
             "ipython==${{ needs.detect.outputs.ipython_version }}" \
             "notebook==${{ needs.detect.outputs.notebook_version }}" \
-            "liveimport==${{ needs.detect.outputs.liveimport_version }}"
+            "liveimport==${{ needs.detect.outputs.liveimport_version }}" \
+            coverage
 
       - name: Run Tests
         shell: bash
