@@ -14,6 +14,11 @@ env:
 # IPython and notebook.  Because of the nature LiveImport, if the canary tests
 # fail, likely many if not all of the remaining tests will fail.
 #
+# "Latest" here with respect to IPython and notebook means unpinned.  The
+# specific package version depends on the Python version running the tests.
+# The IPython project is aggressive about desupporting Python versions in their
+# latest releases.
+#
 
 jobs:
   canary:
@@ -23,7 +28,8 @@ jobs:
         dependencies: [ 'oldest', 'latest' ]
       fail-fast: false
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout LiveImport
+      uses: actions/checkout@v4
 
     - name: Setup Python 3.12
       uses: actions/setup-python@v5
@@ -61,7 +67,8 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout LiveImport
+      uses: actions/checkout@v4
 
     - name: Setup Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5

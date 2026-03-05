@@ -35,12 +35,14 @@ jobs:
         echo "Will install liveimport from ${{ inputs.repository }}."
         echo "Expecting version ${{ inputs.version }}."
       shell: bash
-    - uses: actions/checkout@v4
+    - name: Checkout LiveImport
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Release Tag Must Exist
       run: |
-        if ! git tag -l | grep -q "v${{ inputs.version }}"; then
+        tag_ref="refs/tags/v${{ inputs.version }}"
+        if ! git rev-parse --verify --quiet "$tag_ref" >/dev/null; then
           echo "Version ${{ inputs.version }} not released"
           exit 1
         fi
@@ -59,7 +61,8 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout LiveImport v${{ inputs.version }}
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
         ref: refs/tags/v${{ inputs.version }}
