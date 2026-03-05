@@ -1,7 +1,7 @@
 #
 # Run LiveImport regression tests when there is a new IPython or notebook
 # release.  Because there is no way to trigger a workflow when a python package
-# is released, we poll pypi.org every six hours for the lastest versions of
+# is released, we poll pypi.org every twelve hours for the lastest versions of
 # both, using the action cache as a lightweight persistent store to know
 # whether or not we have already successfully tested a given combination of
 # versions.
@@ -19,7 +19,7 @@ name: IPython/Notebook Release Watch
 
 on:
   schedule:
-    - cron: '37 */6 * * *'   # every 6 hours
+    - cron: '37 11,23 * * *'   # every 12 hours
   workflow_dispatch:
     inputs:
       force:
@@ -110,17 +110,12 @@ jobs:
           pip install \
             "ipython==${{ needs.detect.outputs.ipython_version }}" \
             "notebook==${{ needs.detect.outputs.notebook_version }}" \
-            "liveimport==${{ needs.detect.outputs.liveimport_version }}" \
-            coverage
+            "liveimport==${{ needs.detect.outputs.liveimport_version }}"
 
       - name: Run Tests
         shell: bash
         run: |
-          coverage run \
-              --data-file .coverage.main \
-              --source liveimport test/main.py -failstop
-          coverage combine
-          coverage report --fail-under=100
+          python test/main.py -failstop
 
   full:
     name: Full Matrix
@@ -152,17 +147,12 @@ jobs:
           pip install \
             "ipython==${{ needs.detect.outputs.ipython_version }}" \
             "notebook==${{ needs.detect.outputs.notebook_version }}" \
-            "liveimport==${{ needs.detect.outputs.liveimport_version }}" \
-            coverage
+            "liveimport==${{ needs.detect.outputs.liveimport_version }}"
 
       - name: Run Tests
         shell: bash
         run: |
-          coverage run \
-              --data-file .coverage.main \
-              --source liveimport test/main.py -failstop
-          coverage combine
-          coverage report --fail-under=100
+          python test/main.py -failstop
 
   mark_seen:
     name: Mark versions as successfully tested

@@ -129,11 +129,15 @@ class _Kernel:
                 name = msg['content']['name']
                 text = msg['content']['text']
                 _trace(f".... stream name={name}")
+                _trace_multiline(text)
                 if name == 'stdout':
-                    _trace_multiline(text)
                     stdout.append(text)
                 else:
-                    raise RuntimeError(f"Unexpected stream: {name}")
+                    lines = text.splitlines()
+                    while lines and not lines[0]:
+                        del lines[0]
+                    line = lines[0] if lines else "(no data)"
+                    raise RuntimeError(f"Unexpected stream: {name}: {line}...")
 
             elif mtype == 'display_data':
                 #
