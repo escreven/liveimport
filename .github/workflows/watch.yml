@@ -86,7 +86,7 @@ jobs:
           fi
 
   canary:
-    name: Canary
+    name: Canary [ubuntu-latest, 3.12]
     needs: detect
     if: needs.detect.outputs.should_run == 'true'
     runs-on: ubuntu-latest
@@ -121,13 +121,16 @@ jobs:
           python test/main.py -failstop
 
   full:
-    name: Full Matrix
+    name: Full
     needs: [detect, canary]
     if: needs.detect.outputs.should_run == 'true'
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ['3.12', '3.13', '3.14']
+        exclude:
+          - os: ubuntu-latest
+            python-version: '3.12'
       fail-fast: false
     runs-on: ${{ matrix.os }}
 

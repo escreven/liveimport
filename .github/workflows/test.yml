@@ -22,6 +22,7 @@ env:
 
 jobs:
   canary:
+    name: Canary [ubuntu-latest, 3.12]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -56,12 +57,20 @@ jobs:
         coverage report --include=src/liveimport/*.py --fail-under=100
 
   full:
+    name: Full
     needs: canary
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
         dependencies: [ 'oldest', 'latest' ]
+        exclude:
+          - os: ubuntu-latest
+            python-version: '3.12'
+            dependencies: 'oldest'
+          - os: ubuntu-latest
+            python-version: '3.12'
+            dependencies: 'latest'
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
