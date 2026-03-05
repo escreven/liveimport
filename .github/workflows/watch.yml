@@ -3,7 +3,8 @@
 # release.  Because there is no way to trigger a workflow when a python package
 # is released, we poll pypi.org every six hours for the lastest versions of
 # both, using the action cache as a lightweight persistent store to know
-# whether or not we have already successfully tested a given new version.
+# whether or not we have already successfully tested a given combination of
+# versions.
 #
 # If we find a new version (or versions), we run the LiveImport test suite on
 # Linux, MacOs, and Windows with Python 3.11-3.14.  Note we don't test Python
@@ -33,6 +34,7 @@ jobs:
     outputs:
       ipython_version: ${{ steps.versions.outputs.ipython }}
       notebook_version: ${{ steps.versions.outputs.notebook }}
+      liveimport_version: ${{ steps.versions.outputs.liveimport }}
       cache_hit: ${{ steps.seen.outputs.cache-hit }}
       should_run: ${{ steps.decision.outputs.should_run }}
     steps:
@@ -49,10 +51,12 @@ jobs:
                   return json.load(r)["info"]["version"]
           ipy = latest("ipython")
           nb  = latest("notebook")
+          li  = latest("liveimport")
           with open(output_path, "a", encoding="utf-8") as f:
               f.write(f"ipython={ipy}\n")
               f.write(f"notebook={nb}\n")
-          print(f"Latest: ipython=={ipy} notebook=={nb}")
+              f.write(f"liveimport={li}\n")
+          print(f"Latest: ipython=={ipy} notebook=={nb} liveimport={li}")
           PY
       #
       # If there is a cache entry for the key formed from the latest ipython
@@ -89,6 +93,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: refs/tags/v${{ needs.detect.outputs.liveimport_version }}
 
       - name: Setup Python 3.12
         uses: actions/setup-python@v5
@@ -100,19 +107,20 @@ jobs:
         shell: bash
         run: |
           python -m pip install --upgrade pip wheel setuptools
-          pip install "ipython==${{ needs.detect.outputs.ipython_version }}" \
-                      "notebook==${{ needs.detect.outputs.notebook_version }}" \
-                      coverage
-          pip install -e .
+          pip install \
+            "ipython==${{ needs.detect.outputs.ipython_version }}" \
+            "notebook==${{ needs.detect.outputs.notebook_version }}" \
+            "liveimport==${{ needs.detect.outputs.liveimport_version }}" \
+            coverage
 
       - name: Run Tests
         shell: bash
         run: |
           coverage run \
               --data-file .coverage.main \
-              --include 'src/liveimport/*.py' test/main.py -failstop
+              --source liveimport test/main.py -failstop
           coverage combine
-          coverage report --include=src/liveimport/*.py --fail-under=100
+          coverage report --fail-under=100
 
   full:
     name: Full Matrix
@@ -127,6 +135,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: refs/tags/v${{ needs.detect.outputs.liveimport_version }}
 
       - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -138,19 +149,20 @@ jobs:
         shell: bash
         run: |
           python -m pip install --upgrade pip wheel setuptools
-          pip install "ipython==${{ needs.detect.outputs.ipython_version }}" \
-                      "notebook==${{ needs.detect.outputs.notebook_version }}" \
-                      coverage
-          pip install -e .
+          pip install \
+            "ipython==${{ needs.detect.outputs.ipython_version }}" \
+            "notebook==${{ needs.detect.outputs.notebook_version }}" \
+            "liveimport==${{ needs.detect.outputs.liveimport_version }}" \
+            coverage
 
       - name: Run Tests
         shell: bash
         run: |
           coverage run \
               --data-file .coverage.main \
-              --include 'src/liveimport/*.py' test/main.py -failstop
+              --source liveimport test/main.py -failstop
           coverage combine
-          coverage report --include=src/liveimport/*.py --fail-under=100
+          coverage report --fail-under=100
 
   mark_seen:
     name: Mark versions as successfully tested
