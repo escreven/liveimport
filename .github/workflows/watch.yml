@@ -1,9 +1,10 @@
 #
 # Run LiveImport regression tests when there is a new IPython or notebook
 # release.  Because there is no way to trigger a workflow when a python package
-# is released, we poll pypi.org every twelve hours for the lastest versions of
+# is released, we poll pypi.org every twelve hours for the latest versions of
 # both, using the action cache as a lightweight persistent store to know if we
-# have already successfully tested the current combination of latest versions.
+# have already successfully tested the current combination of those latest 
+# versions.
 #
 # If there is a new combination, we run the LiveImport test suite on Linux,
 # MacOs, and Windows with Python 3.12-3.14.  Note we don't test Python 3.10 or
