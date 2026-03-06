@@ -1,17 +1,16 @@
 #
 # Run LiveImport regression tests when there is a new IPython or notebook
 # release.  Because there is no way to trigger a workflow when a python package
-# is released, we poll pypi.org every twelve hours for the latest versions of
-# both, using the action cache as a lightweight persistent store to know if we
-# have already successfully tested the current combination of those latest 
-# versions.
+# is released, we poll pypi.org every twelve hours for the latest version
+# numbers of both, using the action cache as a lightweight persistent store to
+# know if they are new or not.
 #
-# If there is a new combination, we run the LiveImport test suite on Linux,
-# MacOs, and Windows with Python 3.12-3.14.  Note we don't test Python 3.10 or
-# 3.11 even though those are supported by LiveImport; recent versions of
-# IPython require 3.12 or greater.
+# If either is new, we test the latest release of LiveImport with the latest
+# releases of IPython and notebook on Linux, MacOs, and Windows running Python
+# 3.12-3.14.  We don't run Python 3.10 or 3.11 even though they are supported
+# by LiveImport; recent versions of IPython require 3.12 or greater.
 #
-# We also use the same canary strategy as test.yml -- no need to test the full
+# We use the same canary strategy as test.yml -- no need to test the full
 # matrix if tests on Linux with Python 3.12 fail.
 #
 
@@ -29,7 +28,7 @@ on:
 
 jobs:
   detect:
-    name: Detect Latest IPython/Notebook on PyPI
+    name: Detect
     runs-on: ubuntu-latest
     outputs:
       ipython_version: ${{ steps.versions.outputs.ipython }}
@@ -259,7 +258,7 @@ jobs:
                         `${repo}/actions/runs/${context.runId}`
 
             const body = [
-              "The Dependency Watch workflow run failed.",
+              "The dependency watch workflow run failed.",
               "",
               `- IPython: ${ipy}`,
               `- notebook: ${nb}`,

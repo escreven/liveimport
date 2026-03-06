@@ -15,8 +15,7 @@ from jupyter_client import KernelManager  #type:ignore
 # LiveImport judges a cell to be bootstrap if its store_history option is
 # False.  Note a frontend can, and probably should, use the silent=True option
 # when running bootstrap cells because that bypasses run_cell event handlers
-# altogether -- unfortunately VSCode at least does not in its debugging
-# support.
+# altogether -- unfortunately VSCode notebook debugging support does not.
 #
 # While it would be simpler to use an in-process IPython shell here, we start a
 # headless kernel instead to avoid any potential contamination of other tests
@@ -73,9 +72,11 @@ class _Kernel:
         """
         Send code to the kernel, setting the store_history option as specified.
         `run_cell()` returns the tuple (markdown,stdout), where both are lists
-        of strings.  Other content is discarded.  If running the cell raises an
-        exception in the kernel (including if code in the call raises an
-        exception), `run_cell()` raises a `RuntimeError`.
+        of strings.  `run_cell()` discards non-markdown display content and
+        raises a `RuntimeError` if it receives non-stdout (stderr most likely)
+        stream data.  `run_cell()` also raises a `RuntimeError` if running the
+        cell raises an exception in the kernel, including if code in the cell
+        raises an exception.
         """
         code = textwrap.dedent(code)
 
@@ -126,8 +127,8 @@ class _Kernel:
                 # We have stream data that might be stdout.  Raise an exception
                 # if it's anything else (like stderr).
                 #
-                name = msg['content']['name']
-                text = msg['content']['text']
+                name = content['name']
+                text = content['text']
                 _trace(f".... stream name={name}")
                 _trace_multiline(text)
                 if name == 'stdout':
@@ -143,7 +144,7 @@ class _Kernel:
                 #
                 # We have display data that might be markdown.
                 #
-                data = msg['content']['data']
+                data = content['data']
                 if 'text/markdown' in data:
                     text = data['text/markdown']
                     _trace(f".... markdown")
@@ -160,7 +161,7 @@ class _Kernel:
                     # a RuntimeError if running the cell failed with an
                     # exception.
                     #
-                    reply = client.get_shell_msg(timeout=5.0)
+                    reply = client.get_shell_msg(timeout=_TIMEOUT)
                     content = reply['content']
                     if content['status'] == 'error':
                         _trace(f".... error")
@@ -196,7 +197,7 @@ class _Kernel:
 #
 # Code coverage support.  Each test creates a new IPython kernel running in its
 # own process.  Thus, each kernel must start coverage and save the resulting
-# data a file specific to that test to generate coverage reports.
+# data to a file specific to that test to generate coverage reports.
 #
 
 _COVERAGE_START = """
