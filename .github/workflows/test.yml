@@ -1,4 +1,4 @@
-name: LiveImport Test Suite
+name: Full Test
 
 on:
   pull_request:

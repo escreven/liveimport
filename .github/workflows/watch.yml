@@ -7,14 +7,14 @@
 #
 # If there is a new combination, we run the LiveImport test suite on Linux,
 # MacOs, and Windows with Python 3.12-3.14.  Note we don't test Python 3.10 or
-# 3.11 even though those are supported by LiveImport; the recent versions of
+# 3.11 even though those are supported by LiveImport; recent versions of
 # IPython require 3.12 or greater.
 #
 # We also use the same canary strategy as test.yml -- no need to test the full
 # matrix if tests on Linux with Python 3.12 fail.
 #
 
-name: IPython/Notebook Release Watch
+name: Dependency Release Watch
 
 on:
   schedule:
@@ -22,7 +22,7 @@ on:
   workflow_dispatch:
     inputs:
       force:
-        description: "Run even if IPython/Notebook versions have not changed"
+        description: "Run even if dependencies have not changed"
         type: boolean
         default: false
 

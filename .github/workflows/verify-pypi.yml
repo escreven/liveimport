@@ -1,4 +1,4 @@
-name: Verify Latest PyPI Distribution
+name: Verify PyPI Distribution
 
 #
 # There is a lag between uploading to [Test]PyPI and when the distribution
