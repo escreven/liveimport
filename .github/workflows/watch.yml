@@ -277,5 +277,6 @@ jobs:
               repo,
               title,
               body,
-              labels: [dedupLabel]
+              labels: [dedupLabel],
+              assignees: ["escreven"]
             });
