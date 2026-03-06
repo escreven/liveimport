@@ -25,10 +25,6 @@ on:
         description: "Run even if dependencies have not changed"
         type: boolean
         default: false
-      create_issue:
-        description: "Force creation of an issue"
-        type: boolean
-        default: false
 
 jobs:
   detect:
@@ -199,14 +195,12 @@ jobs:
     if: >
       ${{
         always() &&
-        ( inputs.create_issue ||
         github.event_name != 'workflow_dispatch' &&
         (
           needs.detect.result == 'failure' ||
           needs.canary.result == 'failure' ||
           needs.full.result == 'failure' ||
           needs.mark_seen.result == 'failure'
-        )
         )
       }}
     runs-on: ubuntu-latest
