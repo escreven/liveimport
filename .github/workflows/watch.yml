@@ -25,6 +25,10 @@ on:
         description: "Run even if dependencies have not changed"
         type: boolean
         default: false
+      create_issue:
+        description: "Force creation of an issue"
+        type: boolean
+        default: false
 
 jobs:
   detect:
@@ -188,3 +192,90 @@ jobs:
             pypi-ipython-${{
             needs.detect.outputs.ipython_version }}-notebook-${{
             needs.detect.outputs.notebook_version }}
+
+  open_issue:
+    name: Open issue on failure when scheduled
+    needs: [detect, canary, full, mark_seen]
+    if: >
+      ${{
+        always() &&
+        ( inputs.create_issue ||
+        github.event_name != 'workflow_dispatch' &&
+        (
+          needs.detect.result == 'failure' ||
+          needs.canary.result == 'failure' ||
+          needs.full.result == 'failure' ||
+          needs.mark_seen.result == 'failure'
+        )
+        )
+      }}
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Create non-duplicate failure issue
+        uses: actions/github-script@v7
+        env:
+          IPYTHON_VERSION: >-
+            ${{ needs.detect.outputs.ipython_version || 'unknown' }}
+          NOTEBOOK_VERSION: >-
+            ${{ needs.detect.outputs.notebook_version || 'unknown' }}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const ipy = process.env.IPYTHON_VERSION;
+            const nb = process.env.NOTEBOOK_VERSION;
+
+            const title = `watch.yml failed: ipython ${ipy}, notebook ${nb}`;
+            const dedupLabel = "watch-failure";
+
+            // Try to add a stable label for dedup search.
+            try {
+              await github.rest.issues.getLabel({
+                owner, repo, name: dedupLabel });
+            } catch (e) {
+              if (e.status === 404) {
+                await github.rest.issues.createLabel({
+                  owner, repo, name: dedupLabel, color: "B60205",
+                  description: "Failures from watch.yml scheduled runs"
+                });
+              } else {
+                throw e;
+              }
+            }
+
+            // Dedup: skip if an open issue already exists
+            // for this version pair.
+            const existing = await github.paginate(
+              github.rest.issues.listForRepo, {
+                owner, repo, state: "open",
+                labels: dedupLabel, per_page: 100
+            });
+
+            const duplicate = existing.find(i => i.title === title);
+            if (duplicate) {
+              core.info(`Duplicate exists: #${duplicate.number}`);
+              return;
+            }
+
+            const run = `${context.serverUrl}/${owner}/` +
+                        `${repo}/actions/runs/${context.runId}`
+
+            const body = [
+              "The Dependency Watch workflow run failed.",
+              "",
+              `- IPython: ${ipy}`,
+              `- notebook: ${nb}`,
+              `- Run: ${run}`,
+              "",
+            ].join("\n");
+
+            await github.rest.issues.create({
+              owner,
+              repo,
+              title,
+              body,
+              labels: [dedupLabel]
+            });
