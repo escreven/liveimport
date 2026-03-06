@@ -14,7 +14,7 @@
 # matrix if tests on Linux with Python 3.12 fail.
 #
 
-name: Dependency Release Watch
+name: Dependency Watch
 
 on:
   schedule:
