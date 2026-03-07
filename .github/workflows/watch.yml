@@ -109,7 +109,7 @@ jobs:
         shell: bash
         run: |
           python -m pip install --upgrade pip wheel setuptools
-          pip install \
+          python -m pip install \
             "ipython==${{ needs.detect.outputs.ipython_version }}" \
             "notebook==${{ needs.detect.outputs.notebook_version }}" \
             "liveimport==${{ needs.detect.outputs.liveimport_version }}" \
@@ -153,7 +153,7 @@ jobs:
         shell: bash
         run: |
           python -m pip install --upgrade pip wheel setuptools
-          pip install \
+          python -m pip install \
             "ipython==${{ needs.detect.outputs.ipython_version }}" \
             "notebook==${{ needs.detect.outputs.notebook_version }}" \
             "liveimport==${{ needs.detect.outputs.liveimport_version }}" \

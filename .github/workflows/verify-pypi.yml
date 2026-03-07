@@ -81,9 +81,9 @@ jobs:
     - name: Install LiveImport and Check Version
       run: |
         if [[ "${{ inputs.repository }}" == "PyPI" ]]; then
-          pip install --no-deps liveimport
+          python -m pip install --no-deps liveimport
         else
-          pip install --no-deps -i https://test.pypi.org/simple/ liveimport
+          python -m pip install --no-deps -i https://test.pypi.org/simple/ liveimport
         fi
         installed_version="$(python -c "import importlib.metadata; print(importlib.metadata.version('liveimport'))")"
         echo "LiveImport installed from ${{ inputs.repository }}" \
@@ -97,9 +97,9 @@ jobs:
     - name: Install Dependencies
       run: |
         if [[ "${{ matrix.dependencies }}" == "oldest" ]]; then
-          pip install $OLDEST_DEPS
+          python -m pip install $OLDEST_DEPS
         else
-          pip install $LATEST_DEPS
+          python -m pip install $LATEST_DEPS
         fi
       shell: bash
 

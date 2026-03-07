@@ -40,11 +40,11 @@ jobs:
       run: |
         python -m pip install --upgrade pip wheel setuptools
         if [ "${{ matrix.dependencies }}" = "oldest" ]; then
-          pip install $OLDEST_DEPS
+          python -m pip install $OLDEST_DEPS
         else
-          pip install $LATEST_DEPS
+          python -m pip install $LATEST_DEPS
         fi
-        pip install -e .
+        python -m pip install -e .
 
     - name: Run Tests
       run: |
@@ -87,11 +87,11 @@ jobs:
       run: |
         python -m pip install --upgrade pip wheel setuptools
         if [ "${{ matrix.dependencies }}" = "oldest" ]; then
-          pip install $OLDEST_DEPS
+          python -m pip install $OLDEST_DEPS
         else
-          pip install $LATEST_DEPS
+          python -m pip install $LATEST_DEPS
         fi
-        pip install -e .
+        python -m pip install -e .
       shell: bash
 
     - name: Run Tests
