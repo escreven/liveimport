@@ -83,7 +83,8 @@ jobs:
         if [[ "${{ inputs.repository }}" == "PyPI" ]]; then
           python -m pip install --no-deps liveimport
         else
-          python -m pip install --no-deps -i https://test.pypi.org/simple/ liveimport
+          python -m pip install --no-deps \
+            -i https://test.pypi.org/simple/ liveimport
         fi
         installed_version="$(python -c "import importlib.metadata; print(importlib.metadata.version('liveimport'))")"
         echo "LiveImport installed from ${{ inputs.repository }}" \
