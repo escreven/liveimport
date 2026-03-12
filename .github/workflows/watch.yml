@@ -60,7 +60,7 @@ jobs:
 
       - name: Determine if versions already tested
         id: seen
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: .pypi-trigger
           key: >-
@@ -94,13 +94,13 @@ jobs:
       - name: >-
           Checkout LiveImport
           v${{ needs.detect.outputs.liveimport_version }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: refs/tags/v${{ needs.detect.outputs.liveimport_version }}
 
       - name: Setup Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -138,13 +138,13 @@ jobs:
       - name: >-
           Checkout LiveImport
           v${{ needs.detect.outputs.liveimport_version }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: refs/tags/v${{ needs.detect.outputs.liveimport_version }}
 
       - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -181,7 +181,7 @@ jobs:
           date -u +"%Y-%m-%dT%H:%M:%SZ" > .pypi-trigger/first_seen_utc.txt
 
       - name: Persist tested versions
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: .pypi-trigger
           key: >-
@@ -209,7 +209,7 @@ jobs:
       contents: read
     steps:
       - name: Create non-duplicate failure issue
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           IPYTHON_VERSION: >-
             ${{ needs.detect.outputs.ipython_version || 'unknown' }}

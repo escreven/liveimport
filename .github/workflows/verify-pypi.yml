@@ -36,7 +36,7 @@ jobs:
         echo "Expecting version ${{ inputs.version }}."
       shell: bash
     - name: Checkout LiveImport
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0
     - name: Release Tag Must Exist
@@ -62,13 +62,13 @@ jobs:
 
     steps:
     - name: Checkout LiveImport v${{ inputs.version }}
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0
         ref: refs/tags/v${{ inputs.version }}
 
     - name: Setup Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
