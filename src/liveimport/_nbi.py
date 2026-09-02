@@ -114,13 +114,12 @@ class _LiveImportHandler:
 # deinstalled by hidden_cell_magic() as needed.
 #
 
-_HIDDEN_LIVEMAGIC_RE = re.compile(r"#_%%liveimport\b")
+_HIDDEN_LIVEMAGIC_RE = re.compile(r"#[ \t]*_(?=%%liveimport\b)")
 
 def _unhide_cell_magic(lines:list[str]):
-    if lines and lines[0].startswith("#_%%"):
-        if _HIDDEN_LIVEMAGIC_RE.match(line := lines[0]):
-            return [ lines[i] if i > 0 else line[2:]
-                     for i in range(len(lines)) ]
+    if lines and (match := _HIDDEN_LIVEMAGIC_RE.match(lines[0])):
+        return [ lines[i] if i > 0 else lines[0][match.end():]
+                 for i in range(len(lines)) ]
     return lines
 
 #
