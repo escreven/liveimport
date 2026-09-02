@@ -29,9 +29,10 @@ class _LiveImportMagics(Magics):
     def liveimport(self,line:str,cell:str):
         """Usage: ``%%liveimport [-c|--clear]``\n
         Run a Python cell block, then register all top-level imports.  Option
-        ``--clear`` deletes existing registrations first.
+        ``--clear`` deletes existing registrations first. Anything after a
+        ``#`` on the magic line is treated as a comment and ignored.
         """
-        args = self.parse_options(line,"c","clear")
+        args = self.parse_options(line.split("#",1)[0],"c","clear")
         if args[1]:
             raise UsageError(
                 "Extraneous %%liveimport arguments: " + str(args[1]))
