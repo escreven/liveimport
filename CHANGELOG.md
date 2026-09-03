@@ -1,5 +1,12 @@
 ## Unreleased
 
+#### Added
+- ``%%liveimport`` cell magic now permits ``#``-delimited comments on the cell
+  magic line.  Contributed by @lukas-lang (#41).
+- LiveImport now recognizes ``#WS_%%liveimport`` as hidden cell magic, where
+  ``WS`` is any sequence of spaces and tabs.  Example: ``# _%%liveimport``.
+  Contributed by @lukas-lang (#42).
+
 ## [1.2.5] - 2026-03-02
 
 #### Added
