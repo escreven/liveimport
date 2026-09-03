@@ -66,6 +66,15 @@ To use hidden cell magic with the example above, replace the second cell with
       from printmath import print_math, print_equations as print_eq
       from simulator import *
 
+While the hidden cell magic line is written without separating whitespace
+above, any sequence of space and tab characters is permitted between ``#`` and
+``_%%liveimport``.  There is one separating space below.
+
+  .. code:: python
+
+      # _%%liveimport
+      from gvdot import Dot
+
 If you prefer, you can disable hidden cell magic by calling
 :func:`hidden_cell_magic(enabled=False) <hidden_cell_magic>`.
 
