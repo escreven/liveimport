@@ -18,7 +18,7 @@ On Linux and macOS, this normally creates a profile directory
 
 and on Windows
 
-    ``%USERPROFILE%\.ipython\profile_default\``
+    %USERPROFILE%\.ipython\profile_default\
 
 Your profile directory should contain a file `ipython_config.py`.  Add to that
 file these lines:
