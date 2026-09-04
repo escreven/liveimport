@@ -1,7 +1,7 @@
 .. currentmodule:: liveimport
 
 Installation
-------------
+============
 
 You can install LiveImport from PyPI with
 
