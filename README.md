@@ -73,6 +73,10 @@ $ pip install .
 
 LiveImport requires Python 3.10 or greater and IPython 7.23.1 or greater.
 
+LiveImport is normally enabled by importing it into a notebook.  But you can
+also [enable it by
+default](https://github.com/escreven/liveimport/blob/work/enabling-by-default.md).
+
 ## Reliability
 
 LiveImport includes automated tests with 100% code coverage, which are run on
