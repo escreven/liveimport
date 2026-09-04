@@ -6,8 +6,8 @@
 - LiveImport now recognizes ``#WS_%%liveimport`` as hidden cell magic, where
   ``WS`` is any sequence of spaces and tabs.  Example: ``# _%%liveimport``.
   Contributed by [@lukas-lang](https://github.com/lukas-lang) ([#42](https://github.com/escreven/liveimport/pull/42)).
-- Documented how to enable LiveImport in notebooks at startup using IPython
-  profiles based on feedback from [@lukas-lang](https://github.com/lukas-lang).
+- Guidance on enabling LiveImport by default using IPython profiles.  Based on
+  feedback from [@lukas-lang](https://github.com/lukas-lang).
 
 ## [1.2.5] - 2026-03-02
 

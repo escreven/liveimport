@@ -1,6 +1,6 @@
 ## Enabling by Default
 
-LiveImport is enabled in a notebook session when it is first imported.  That
+LiveImport is enabled in a notebook session when it's first imported.  That
 means by default the first cell of a notebook cannot usefully be a
 `%%liveimport` or `#_%%liveimport` cell.  However, you can change that by
 using IPython profiles to enable LiveImport at startup.
@@ -30,8 +30,11 @@ file these lines:
     del _liveimport_importlib_util
 ```
 
-This code causes IPython to import `liveimport` when a notebook session
-starts before any cell is run, as long as `liveimport` is installed in the
-environment in which the notebook is running.  The first cell of a notebook can
-then be a `%%liveimport` cell, and notebooks using LiveImport need not
-include a `import liveimport` statement at all.
+Be sure to place them after the `c = get_config()` statement and after any
+assignment to `c.InteractiveShellApp.exec_lines`.
+
+This code causes IPython to import `liveimport` into notebook sessions when
+they start, before any cell is run, as long as `liveimport` is installed in the
+execution environment.  The first cell of a notebook can then be a
+`%%liveimport` cell, and notebooks using LiveImport need not include an `import
+liveimport` statement at all.

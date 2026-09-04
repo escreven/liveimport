@@ -209,8 +209,8 @@ multiple ``%%liveimport`` cells, then it's best if the first (and only the
 first) uses option ``--clear``.
 
 Normally, the first ``%%liveimport`` cell cannot be the first notebook cell
-because LiveImport isn't enabled until it's imported.  See
-:ref:`Enabling by Default <enabling_by_default>` to change that.
+because LiveImport is only enabled when it's imported.  See :ref:`Enabling by
+Default <enabling_by_default>` to change that.
 
 Reload Reports
 --------------

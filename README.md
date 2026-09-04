@@ -50,6 +50,10 @@ notification.
 If you currently use autoreload, you might consider [comparing LiveImport
 to autoreload](https://github.com/escreven/liveimport/blob/main/comparison/Comparison.md).
 
+LiveImport is normally enabled by importing it into a notebook.  But you can
+also [enable it by
+default](https://github.com/escreven/liveimport/blob/main/enabling-by-default.md).
+
 ## Documentation
 
 See [liveimport.readthedocs.io](https://liveimport.readthedocs.io) for a user
@@ -72,10 +76,6 @@ $ pip install .
 ```
 
 LiveImport requires Python 3.10 or greater and IPython 7.23.1 or greater.
-
-LiveImport is normally enabled by importing it into a notebook.  But you can
-also [enable it by
-default](https://github.com/escreven/liveimport/blob/main/enabling-by-default.md).
 
 ## Reliability
 
