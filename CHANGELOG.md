@@ -1,5 +1,8 @@
 ## Unreleased
 
+
+## [1.2.6] - 2026-09-04
+
 #### Added
 - ``%%liveimport`` cell magic now permits ``#``-delimited comments on the cell
   magic line.  Contributed by [@lukas-lang](https://github.com/lukas-lang) ([#41](https://github.com/escreven/liveimport/pull/41)).
@@ -9,6 +12,7 @@
 - Guidance on enabling LiveImport by default using IPython profiles.  Based on
   feedback from [@lukas-lang](https://github.com/lukas-lang).
 
+
 ## [1.2.5] - 2026-03-02
 
 #### Added
@@ -17,6 +21,7 @@
 #### Fixed
 - `workspace()` now normalizes `/..` directory components enabling relative
   workspace directory paths.
+
 
 ## [1.2.4] - 2026-01-23
 
