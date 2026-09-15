@@ -19,8 +19,7 @@ def _absolute(path:str|PathLike) -> Path:
 # likely what a user expects.
 #
 
-if "_WORKSPACE" not in globals():
-    _WORKSPACE:list[Path] = [ _absolute(".") ]
+_WORKSPACE:list[Path] = [ _absolute(".") ]
 
 #
 # Return true iff the named file is in the workspace.

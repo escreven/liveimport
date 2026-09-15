@@ -198,6 +198,7 @@ _SCRIPTED_FALSE_RE = re.compile(
 _COVERAGE_START = """
 import coverage
 coverage_object = coverage.Coverage(
+    branch=True,
     data_file="../.coverage.notebook",
     include="../src/liveimport/*.py")
 coverage_object.start()

@@ -93,15 +93,19 @@ def _absolute_module(node:ast.ImportFrom, parent:str,
     raise ImportError(message)
 
 #
-# Return true iff the given module spec has a source file.
+# Return the module state specification and Python source file name for the
+# given module if they exist for the module.  A module can have both, have only
+# a spec, or have neither.
 #
 
-def _has_source_file(spec:ModuleSpec, must_exist=False) -> bool:
-    if not spec.has_location: return False
+def _locate(module:ModuleType) -> tuple[ModuleSpec|None, str|None]:
+    spec = module.__spec__
+    if spec is None: return None, None
+    if not spec.has_location: return spec, None
     origin = spec.origin
     assert origin is not None
-    if not origin.endswith(".py"): return False
-    return not must_exist or exists(origin)
+    if not origin.endswith(".py"): return spec, None
+    return spec, origin
 
 #
 # Rebind asname in namespace to a named value in module, raising a descriptive
@@ -251,7 +255,7 @@ class _ModuleInfo:
 
     def __init__(self, module:ModuleType):
 
-        spec = module.__spec__
+        spec, file = _locate(module)
         if spec is None:
             raise ValueError(f"Module {module.__name__} has no spec")
 
@@ -263,8 +267,7 @@ class _ModuleInfo:
         self.next_mtime   = -math.inf
         self.dependencies = []
 
-        if _has_source_file(spec, must_exist=False):
-            assert (file := spec.origin) is not None
+        if file is not None:
             self.file = file
             if (mtime := _mtime_if_exists(file)) is not None:
                 self.mtime      = mtime
@@ -339,9 +342,8 @@ def _track_new_indirects() -> None:
                 #
                 if modulename in _MODULE_TABLE: continue
                 if (module := sys.modules.get(modulename)) is None: continue
-                if (spec := module.__spec__) is None: continue
-                if not _has_source_file(spec): continue
-                assert (file := spec.origin) is not None
+                _, file = _locate(module)
+                if file is None: continue
                 if not _in_workspace(file): continue
                 #
                 # Start tracking the dependee.

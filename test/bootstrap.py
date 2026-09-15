@@ -59,7 +59,7 @@ class _Kernel:
         dir = os.path.dirname(__file__)
         if not dir: dir = '.'
 
-        self.manager = KernelManager(kernel_name='python3')
+        self.manager:KernelManager = KernelManager(kernel_name='python3')
         self.manager.start_kernel(cwd=dir)
 
         self.client = self.manager.client()
@@ -203,6 +203,7 @@ class _Kernel:
 _COVERAGE_START = """
 import coverage
 coverage_object = coverage.Coverage(
+    branch=True,
     data_file="../.coverage.bootstrap-{name}",
     include="../src/liveimport/*.py")
 coverage_object.start()
@@ -229,7 +230,7 @@ def _coverage_end(kernel:_Kernel):
         kernel.run_cell(_COVERAGE_END)
 
 
-def _preamble(kernel:_Kernel):
+def _preamble(kernel:_Kernel, report:bool=True):
     """
     Common prefix of all tests.
     """
@@ -238,7 +239,7 @@ def _preamble(kernel:_Kernel):
         from setup import *
         from setup_imports import *
     """)
-    kernel.run_cell("liveimport.auto_sync(grace=0.25)\n")
+    kernel.run_cell(f"liveimport.auto_sync(grace=0.25,report={report})\n")
     kernel.run_cell("%%liveimport\nimport mod1\n")
     kernel.run_cell("mod1_tag = get_tag('mod1')\n")
 
@@ -317,6 +318,24 @@ def test_discarded_report():
     finally:
         kernel.close()
 
+
+def test_disabled_report():
+    """
+    Deferred reload reports should be discarded if reports are disabled.
+    """
+    kernel = _Kernel()
+    try:
+        _coverage_start(kernel,"disable")
+        _preamble(kernel,report=False)
+        _touch(kernel)
+        time.sleep(0.5)
+        _bootstrap(kernel, expect_next_tag=True)
+        _normal(kernel, expect_reload=False)
+        _coverage_end(kernel)
+    finally:
+        kernel.close()
+
+
 #
 # bootstrap.py can be run from the command line.  That is useful for debugging
 # bootstrap.py, and also tracing interaction with IPython kernels.
@@ -325,3 +344,4 @@ if __name__ == '__main__':
     _trace_enable = True
     test_deferred_report()
     test_discarded_report()
+    test_disabled_report()
