@@ -48,7 +48,7 @@ jobs:
 
     - name: Run Tests
       run: |
-        coverage run \
+        coverage run --branch \
             --data-file .coverage.main \
             --include 'src/liveimport/*.py' test/main.py -failstop
         coverage combine
@@ -96,7 +96,7 @@ jobs:
 
     - name: Run Tests
       run: |
-        coverage run \
+        coverage run --branch \
             --data-file .coverage.main \
             --include 'src/liveimport/*.py' test/main.py -failstop
         coverage combine

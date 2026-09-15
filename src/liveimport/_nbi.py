@@ -1,20 +1,20 @@
 import math
 import re
 import time
+from typing import Callable
 import IPython
 from IPython.display import display, Markdown
 from IPython.core.magic import Magics, magics_class, cell_magic
 from IPython.core.error import UsageError
 from IPython.core.inputtransformer2 import TransformerManager
+from IPython.core.interactiveshell import InteractiveShell
 
 from ._core import ModuleError, sync, register
 
 
 #
-# Notebook integration.
+# transform_cell() method closure.
 #
-
-_IPYTHON_SHELL = IPython.get_ipython()  #type:ignore
 
 _transform_cell = TransformerManager().transform_cell
 
@@ -69,14 +69,16 @@ def _display_reload_events(events):
 class _LiveImportHandler:
     __slots__ = ("autosync_enabled", "autosync_report",
                  "autosync_grace", "post_cell_time",
-                 "deferred_events")
+                 "deferred_events", "shell", "ucm")
 
-    def __init__(self):
+    def __init__(self, shell:InteractiveShell, ucm:Callable):
         self.autosync_enabled = True
         self.autosync_grace   = 1.0
         self.autosync_report  = True
         self.post_cell_time   = -math.inf
         self.deferred_events  = []
+        self.shell            = shell
+        self.ucm              = ucm
 
     def pre_run_cell(self,info):
         if not self.autosync_enabled:
@@ -123,17 +125,32 @@ def _unhide_cell_magic(lines:list[str]):
     return lines
 
 #
-# Register magic, event handlers, and unhiding once at initial load.
+# Register with the IPython interactive shell.
 #
 
-if "_did_register" not in globals():
-    _did_register = True
-    if _IPYTHON_SHELL is not None:
-        _IPYTHON_SHELL.register_magics(_LiveImportMagics)
-        _HANDLER = _LiveImportHandler()
-        _IPYTHON_SHELL.events.register('pre_run_cell',_HANDLER.pre_run_cell)
-        _IPYTHON_SHELL.events.register('post_run_cell',_HANDLER.post_run_cell)
-        _IPYTHON_SHELL.input_transformers_cleanup.append(_unhide_cell_magic)
+def _register_with_shell():
+
+    global _HANDLER
+
+    shell = IPython.get_ipython()  #type:ignore
+
+    if shell is None:
+        _HANDLER = None
+    else:
+        handler = _HANDLER if "_HANDLER" in globals() else None  #type:ignore
+        if handler is not None:
+            shell.events.unregister('pre_run_cell',handler.pre_run_cell)
+            shell.events.unregister('post_run_cell',handler.post_run_cell)
+            cleanup:list = shell.input_transformers_cleanup
+            if handler.ucm in cleanup:
+                cleanup.remove(handler.ucm)
+        shell.register_magics(_LiveImportMagics)
+        _HANDLER = handler = _LiveImportHandler(shell,_unhide_cell_magic)
+        shell.events.register('pre_run_cell',handler.pre_run_cell)
+        shell.events.register('post_run_cell',handler.post_run_cell)
+        shell.input_transformers_cleanup.append(_unhide_cell_magic)
+
+_register_with_shell()
 
 
 ############################################################################
@@ -159,7 +176,7 @@ def auto_sync(enabled:bool|None=None,*,
     :param report: Use Markdown console blocks to report when modules are
         reloaded by automatic syncing.
     """
-    if _IPYTHON_SHELL is None: return
+    if _HANDLER is None: return
     if enabled is not None: _HANDLER.autosync_enabled = enabled
     if grace   is not None: _HANDLER.autosync_grace   = grace
     if report  is not None: _HANDLER.autosync_report  = report
@@ -175,12 +192,11 @@ def hidden_cell_magic(enabled:bool|None=None) -> None:
         Code, yet still function as desired.  Hidden cell magic is enabled by
         default.
     """
-    if _IPYTHON_SHELL is None: return
+    if _HANDLER is None: return
     if enabled is None: return
-    cleanup = _IPYTHON_SHELL.input_transformers_cleanup
-    for i, transformer in enumerate(cleanup):
-        if getattr(transformer,'__module__',None) == 'liveimport._nbi':
-            del cleanup[i]
-            break
-    if enabled:
-        cleanup.append(_unhide_cell_magic)
+    cleanup:list = _HANDLER.shell.input_transformers_cleanup
+    if enabled != (_unhide_cell_magic in cleanup):
+        if enabled:
+            cleanup.append(_unhide_cell_magic)
+        else:
+            cleanup.remove(_unhide_cell_magic)

@@ -212,7 +212,7 @@ function require_deployable_README {
 
 function report_coverage {
 
-    $PYTHON -m coverage run \
+    $PYTHON -m coverage run --branch \
         --data-file .coverage.main \
         --include 'src/liveimport/*.py' test/main.py
 

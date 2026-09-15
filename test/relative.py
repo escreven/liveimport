@@ -108,3 +108,10 @@ def test_register_relative_without_package():
         error = ex
 
     assert error is not None and "outside any package" in str(error)
+    try:
+        liveimport.register(globals(),"from . import mod1_public")
+        error = None
+    except ImportError as ex:
+        error = ex
+
+    assert error is not None and "outside any package" in str(error)
