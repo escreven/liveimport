@@ -4,6 +4,8 @@
 - [Coverage](https://coverage.readthedocs.io/en/7.16.1/) option ``--branch`` is
   now used for the `op.sh` coverage reports and GitHub workflows, strengthening
   code coverage assurance.
+
+#### Fixed
 - Manually reloading LiveImport consistently resets all state.  (This is only
   useful for testing since reloading LiveImport requires reloading the
   implementation modules as well as the public module, all in the correct
