@@ -1,6 +1,6 @@
 import sys
 from typing import Any, TextIO
-from ._core import _MODULE_TABLE, _NAMESPACE_TABLE, _rebind_str
+from ._core import _MODULE_TABLE, _NAMESPACE_TABLE
 
 ##############################################################################
 #                              TEST AND DEBUG
@@ -18,19 +18,25 @@ def _dump(file:TextIO|None=None):
               f" attachedto={info.attachedto}", file=file)
     for id, info in sorted(_NAMESPACE_TABLE.items()):
         print(f"Namespace {id}",file=file)
-        for rebind in info.journal:
-            print(f"    {_rebind_str(rebind)}",file=file)
+        for record in info.journal.sequence:
+            print(f"    {record}",file=file)
 
 #
 # Check registration.  The arguments describe an import statement.
-# _is_registered() returns true iff there are rebinds consistent with that
-# statement.
 #
 # (modulename, None, None)   --> import <modulename>
 # (modulename, None, asname) --> import <modulename> as <asname>
 # (modulename, name, None)   --> from <modulename> import <name>
 # (modulename, name, asname) --> from <modulename> import <name> as <asname>
 # (modulemame, '*',  None)   --> from <modulename> import '*'
+#
+# _is_registered() returns true iff there is an import journal for the given
+# namespace covering that statement.  Furthermore, if the statement is so
+# covered, _is_registered() raises an AssertionError if
+# _is_tracked(modulename,namespace) would return False.
+#
+#  TODO: THE BELOW IS NO LONGER TRUE.  VERIFY IT ISN'T REQUIRED FOR
+# TESTING, AND REMOVE IF SO.
 #
 # Journal coalescing means the rebinds of some registrations can hide others.
 # Example:
@@ -48,14 +54,9 @@ def _is_registered(namespace:dict[str,Any], modulename:str,
     nsinfo = _NAMESPACE_TABLE.get(nsid := id(namespace))
     if nsinfo is None: return False
 
-    valmodname = modulename
-    if name is None and asname is None:
-        valmodname = modulename.split('.',1)[0]
-        asname = valmodname
-    elif asname is None and name != '*':
-        asname = name
+    assert name != '*' or asname is None
 
-    if (valmodname,name,asname) in nsinfo.journal:
+    if nsinfo.journal.covers(modulename,name,asname):
         assert (modulename in _MODULE_TABLE and
                 nsid in _MODULE_TABLE[modulename].attachedto), (
             f"Module {modulename} for registration is not attached")
@@ -82,7 +83,7 @@ def _is_tracked(modulename:str, and_attached_to:dict[str,Any]|None=None):
 def _hash_state() -> int:
     hashcode = 0
     for nsid, nsinfo in _NAMESPACE_TABLE.items():
-        hashcode = hash((hashcode,tuple(nsinfo.journal)))
+        hashcode = hash((hashcode,nsinfo.journal))
     for modulename, info in _MODULE_TABLE.items():
         hashcode = hash((hashcode,modulename,tuple(sorted(info.attachedto))))
     return hashcode
@@ -122,7 +123,20 @@ def _verify():
     for nsid, nsinfo in _NAMESPACE_TABLE.items():
         assert nsid in attachedto_union, (
             f"Namespace {nsid} has no attachments")
-        for rebind in nsinfo.journal:
-            modulename, name, _ = rebind
-            assert name is None or modulename in _MODULE_TABLE, (
-                f"Namespace {nsid} rebind {rebind} not for tracked module" )
+        for record in nsinfo.journal.sequence:
+            assert record.modulename in _MODULE_TABLE, (
+                f"Namespace {nsid} record {record} not for tracked module" )
+
+
+#
+# Reset all liveimport state by reloading all implementation modules.
+#
+
+def _reload_liveimport():
+    from importlib import reload
+    reload(sys.modules['liveimport._workspace'])
+    reload(sys.modules['liveimport._importrec'])
+    reload(sys.modules['liveimport._core'])
+    reload(sys.modules['liveimport._nbi'])
+    reload(sys.modules['liveimport._debug'])
+    reload(sys.modules['liveimport'])

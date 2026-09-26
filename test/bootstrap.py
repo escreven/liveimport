@@ -60,7 +60,8 @@ class _Kernel:
         if not dir: dir = '.'
 
         self.manager:KernelManager = KernelManager(kernel_name='python3')
-        self.manager.start_kernel(cwd=dir)
+        self.manager.start_kernel(cwd=dir,
+            extra_arguments=["--IPKernelApp.log_level=ERROR"])
 
         self.client = self.manager.client()
         self.client.start_channels()

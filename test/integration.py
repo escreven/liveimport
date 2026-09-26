@@ -121,7 +121,8 @@ class _TestbenchPreprocessor(ExecutePreprocessor):
     __slots__ = "verbose"
 
     def __init__(self, config:Config, verbose:bool):
-        super().__init__(kernel_name="python3",config=config)
+        super().__init__(kernel_name="python3",config=config,
+                         extra_arguments=["--IPKernelApp.log_level=ERROR"])
         self.verbose = verbose
 
     def preprocess_cell(self, cell:NotebookNode, resources, index):

@@ -537,8 +537,59 @@ def test_implicit_package_register():
     assert not is_tracked("pkg")
 
     liveimport.register(globals(),"from pkg import smod3")
-    assert is_registered("pkg.smod3")
-    assert is_tracked("pkg",globals())
+    assert is_registered("pkg","smod3")
+    assert is_tracked("pkg.smod3",globals())
+
+
+def test_import_as():
+    """
+    Registration and reloading of import ... as forms".
+    """
+    ns:dict[str,Any] = {
+        'name1': sys.modules['mod1'],
+        'name2': sys.modules['pkg.smod1'],
+        'name3': sys.modules['pkg.subpkg.ssmod1'],
+    }
+
+    liveimport.register(ns,
+    """
+    import mod1 as name1
+    import pkg.smod1 as name2
+    import pkg.subpkg.ssmod1 as name3
+    """)
+
+    assert is_registered("mod1",None,"name1",ns)
+    assert is_registered("pkg.smod1",None,"name2",ns)
+    assert is_registered("pkg.subpkg.ssmod1",None,"name3",ns)
+
+    assert not is_registered("mod1",None,None,ns)
+    assert not is_registered("pkg.smod1",None,None,ns)
+    assert not is_registered("pkg.subpkg.ssmod1",None,None,ns)
+
+    assert not is_tracked("pkg")
+    assert not is_tracked("pkg.subpkg")
+
+    mod1_tag   = get_tag("mod1")
+    smod1_tag  = get_tag("pkg.smod1")
+    ssmod1_tag = get_tag("pkg.subpkg.ssmod1")
+
+    ns['name1'] = None
+    ns['name2'] = None
+    ns['name3'] = None
+
+    touch_module("mod1")
+    touch_module("pkg.smod1")
+    touch_module("pkg.subpkg.ssmod1")
+
+    liveimport.sync()
+
+    expect_tag("mod1",next_tag(mod1_tag))
+    expect_tag("pkg.smod1",next_tag(smod1_tag))
+    expect_tag("pkg.subpkg.ssmod1",next_tag(ssmod1_tag))
+
+    assert ns['name1'] is sys.modules['mod1']
+    assert ns['name2'] is sys.modules['pkg.smod1']
+    assert ns['name3'] is sys.modules['pkg.subpkg.ssmod1']
 
 
 def test_auto_sync_outside_nb():
