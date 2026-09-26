@@ -7,7 +7,7 @@
 #
 # If either is new, we test the latest release of LiveImport with the latest
 # releases of IPython and notebook on Linux, MacOs, and Windows running Python
-# 3.12-3.14.  We don't run Python 3.10 or 3.11 even though they are supported
+# 3.12-3.15.  We don't run Python 3.10 or 3.11 even though they are supported
 # by LiveImport; recent versions of IPython require 3.12 or greater.
 #
 # We use the same canary strategy as test.yml -- no need to test the full
@@ -127,7 +127,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.12', '3.13', '3.14']
+        python-version: ['3.12', '3.13', '3.14', '3.15']
         exclude:
           - os: ubuntu-latest
             python-version: '3.12'
@@ -147,6 +147,7 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
           cache: 'pip'
 
       - name: Install Dependencies (latest IPython/Notebook)

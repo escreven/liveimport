@@ -4,12 +4,23 @@
 - [Coverage](https://coverage.readthedocs.io/en/7.16.1/) option ``--branch`` is
   now used for the `op.sh` coverage reports and GitHub workflows, strengthening
   code coverage assurance.
+- IPython kernel warnings during testing are suppressed.
+- Replaced rebind journal with an import record journal as part of preparing
+  for Python 3.15 lazy imports.
+- Check to determine if a registered import statement has already executed is
+  now slightly stricter: all modules in a hierarchy must be loaded.  For
+  example, "from a.b.c import x" requires "a", "a.b", and "a.b.c" to be loaded.
 
 #### Fixed
 - Manually reloading LiveImport consistently resets all state.  (This is only
   useful for testing since reloading LiveImport requires reloading the
   implementation modules as well as the public module, all in the correct
   order.)
+- Extraneous op.sh command line arguments are disallowed.
+- The decision to track module "a.b.c.x" when "from a.b.c import x" is
+  registered is now based on whether or not attribute "x" of module "a.b.c" is
+  the loaded module "a.b.c.x".  Previously, it was determined by whether or not
+  attribute "x" of module "a.b.c" was any module.
 
 ## [1.2.6] - 2026-09-04
 

@@ -12,17 +12,18 @@ import io
 from types import ModuleType
 import liveimport
 from liveimport._nbi import _LiveImportMagics
+from liveimport._importrec import _ImportIssue
 from setup import *
 from setup_imports import *
 
 
 def test_magic_missing_shell():
     """
-    _LiveImportsMagic without a shell.
+    _LiveImportsMagics without a shell.
     """
     m = _LiveImportMagics()
     try:
-        m.liveimport('','')
+        m.liveimport('','')  # type: ignore (pylance limitation)
         error = None
     except RuntimeError as ex:
         error = ex
@@ -37,7 +38,7 @@ def test_extra_magic_arguments():
     """
     m = _LiveImportMagics()
     try:
-        m.liveimport('--clear extra','')
+        m.liveimport('--clear extra','')  # type: ignore (pylance limitation)
         error = None
     except UsageError as ex:
         error = ex
@@ -79,7 +80,7 @@ def test_disappearing_name():
             error = None
         except RuntimeError as ex:
             error = ex
-        assert error is not None and "disappeared" in str(error)
+        assert error is not None and "mod2_public1" in str(error)
 
     liveimport.sync()
     assert hasattr(mod2,'mod2_public1') #type:ignore
@@ -165,3 +166,12 @@ def test_getmtime_failure():
         assert error is not None
     finally:
         liveimport._core.getmtime = os.path.getmtime
+
+
+def test_import_issue_str():
+    """
+    Internal exception _ImportIssue should have a string representation
+    including the issue.  It is tested here because they should never escape
+    the public API.
+    """
+    assert "mairzy doats" in str(_ImportIssue("mairzy doats"))

@@ -11,6 +11,9 @@ from types import ModuleType
 from typing import Any, Callable, NoReturn
 
 from ._workspace import _in_workspace
+from ._importrec import _ImportJournal, _ImportRecord, _ImportIssue
+from ._importrec import _ImportNameRecord, _ImportNameAsRecord
+from ._importrec import _ImportFromNamesRecord, _ImportFromStarRecord
 
 
 ##############################################################################
@@ -107,109 +110,10 @@ def _locate(module:ModuleType) -> tuple[ModuleSpec|None, str|None]:
     if not origin.endswith(".py"): return spec, None
     return spec, origin
 
-#
-# Rebind asname in namespace to a named value in module, raising a descriptive
-# error if name is missing from module.
-#
-
-def _assign(module:ModuleType, name:str, asname:str,
-            namespace:dict[str,Any]) -> None:
-
-    if not hasattr(module,name):
-        #
-        # This is not possible in normal use since reload() never
-        # deletes names from loaded modules. Likely it can only
-        # happen if the application explicitly deletes names from the
-        # module dictionary.  Because it is so obscure, we judge it
-        # more confusing to document than not.
-        #
-        raise RuntimeError(
-            f"Name {name} referenced in registered"
-            f" import from {module.__name__} has disappeared")
-    else:
-        namespace[asname] = getattr(module,name)
-
 
 ##############################################################################
 #                                 MODEL
 ##############################################################################
-
-#
-# We record a name rebinding journal for target namespaces as import statements
-# are registered.  The journal has three kinds of rebind records, all
-# implemented as triples:
-#
-#     (modulename, None, asname)  Rebind module object to asname
-#     (modulename, name, asname)  Rebind module named value to asname
-#     (modulename, '*',  None)    Rebind module public named values to same
-#
-# A journal is a list of rebind records.  We compact journals after extending
-# them so they don't grow without bound.
-#
-
-_Rebind = tuple[str, str|None, str|None]
-_Journal = list[_Rebind]
-
-#
-# Return string representation of a rebind.
-#
-
-def _rebind_str(rebind:_Rebind) -> str:
-    modulename, name, asname = rebind
-    return ("Rebind " + modulename +
-            ("." + name if name is not None else "") +
-            " --> " +
-            (asname if asname is not None else "_"))
-
-#
-# Return an equivalent journal that has no superfluous entries according to
-# these lemmas: only the last rebind of an asname can be detected, and only the
-# last '*' rebind for a module can be detected.
-#
-
-def _journal_compact(journal:_Journal) -> _Journal:
-
-    star_set   = set()
-    asname_set = set()
-    result     = []
-
-    for i in range(len(journal)-1,-1,-1):
-
-        rebind = journal[i]
-        modulename, name, asname = rebind
-
-        if asname is not None:
-            if asname not in asname_set:
-                asname_set.add(asname)
-                result.append(rebind)
-        else:
-            assert name == '*'
-            if modulename not in star_set:
-                star_set.add(modulename)
-                result.append(rebind)
-
-    result.reverse()
-    return result
-
-#
-# Apply the journal to a namespace.
-#
-
-def _journal_apply(journal:_Journal, namespace:dict[str,Any]):
-    modules = sys.modules
-    for modulename, name, asname in journal:
-        module = modules[modulename]
-        if asname is not None:
-            if name is not None:
-                _assign(module,name,asname,namespace)
-            else:
-                namespace[asname] = module
-        else:
-            star_names = (module.__all__ if hasattr(module,'__all__') else
-                          (name for name in dir(module)
-                           if not name.startswith('_')))
-            for name in star_names:
-                _assign(module,name,name,namespace)
 
 #
 # Information LiveImport tracks about namespaces in _NAMESPACE_TABLE keyed by
@@ -222,11 +126,11 @@ class _NamespaceInfo:
     __slots__ = "namespace", "journal"
 
     namespace:dict[str,Any]
-    journal:_Journal
+    journal:_ImportJournal
 
     def __init__(self,namespace:dict[str,Any]):
         self.namespace = namespace
-        self.journal = []
+        self.journal = _ImportJournal()
 
 _NAMESPACE_TABLE:dict[int,_NamespaceInfo] = dict()
 
@@ -306,7 +210,7 @@ class _ModuleInfo:
                     result.add(module)
                     for alias in stmt.names:
                         result.add(module + '.' + alias.name)
-        except BaseException as ex:
+        except Exception as ex:
             raise ModuleError(self.module.__name__,"analysis") from ex
 
         self.dependencies = list(result)
@@ -367,52 +271,32 @@ def _track(module:ModuleType) -> _ModuleInfo:
     return info
 
 #
-# Register a piece of an import statement.  _register_piece() also verifies
-# there is evidence that an encompassing import statement was actually
-# executed.
-#
-# Parameters:
-#
-#     namespace    - target namespace
-#     journal      - extend this journal
-#     trackmodname - track this named module
-#     valuemodname - rebind value of or from this named module
-#     name         - assign from this attribute (None means module itself)
-#     asname       - assign to this attribute; none for '*' rebinds
-#
-# _register_piece() returns the tracked module info.
+# Register an import record, verifying there is evidence that an encompassing
+# import statement was actually executed.  _register_record() tracks modules
+# and adds namespace attachments as needed.
 #
 
-def _register_piece(namespace:dict[str,Any], journal:_Journal,
-                    trackmodname:str, valuemodname:str,
-                    name:str|None, asname:str|None) -> _ModuleInfo:
+def _register_record(record:_ImportRecord, namespace:dict[str,Any],
+                     records:list[_ImportRecord],
+                     attachments:list[_ModuleInfo]):
 
-    def invalid(reason:str) -> NoReturn:
-        if name is None:
-            stmt = "import " + trackmodname
-            assert asname is not None
-            if asname != valuemodname:
-                stmt += " as " + asname
-        else:
-            stmt = "from " + trackmodname + " import " + name
-            if asname is not None and asname != name:
-                stmt += " as " + asname
-        raise ValueError(f"{reason}; missing {stmt}?")
+    try:
+        record.validate(namespace)
+    except _ImportIssue as ex:
+        raise ValueError(ex.issue + "; missing " + record.statement() + "?")
 
-    trackmod = sys.modules.get(trackmodname)
-    if trackmod is None: invalid(f"Module {trackmodname} not loaded")
+    modules = sys.modules
+    module = modules[modulename := record.modulename]
+    attachments.append(_track(module))
 
-    valuemod = sys.modules.get(valuemodname)
-    if valuemod is None: invalid(f"Module {valuemodname} not loaded")
+    if isinstance(record,_ImportFromNamesRecord):
+        prefix = modulename + "."
+        for name, _ in record.namepairs:
+            child = modules.get(prefix + name)
+            if child is not None and getattr(module,name,None) is child:
+                attachments.append(_track(child))
 
-    if name is not None and name != '*' and not hasattr(valuemod, name):
-        invalid(f"No name {name} in {valuemodname}")
-
-    if asname is not None and not asname in namespace:
-        invalid(f"No name {asname} in namespace")
-
-    journal.append((valuemodname,name,asname))
-    return _track(trackmod)
+    records.append(record)
 
 
 ##############################################################################
@@ -530,65 +414,37 @@ def register(namespace:dict[str,Any], importstmts:str,
     # See the Python language reference section on import statements.
     #
 
-    journal:_Journal = []
+    records:list[_ImportRecord] = []
     attachments:list[_ModuleInfo] = []
 
     source = textwrap.dedent(importstmts)
     for stmt in ast.parse(source,"<importstmts>").body:
         if isinstance(stmt,ast.Import):
             #
-            # Case 1 import a.b.c -->
-            #     track a.b.c
-            #     rebind module(a) to a
-            #
-            # Case 2: import a.b.c as x -->
-            #     track a.b.c
-            #     rebind module(a.b.c) to x
+            # Case 1: import a.b.c
+            # Case 2: import a.b.c as x
             #
             for alias in stmt.names:
                 modulename = alias.name
                 asname = alias.asname
-                if asname is None:
-                    topname = modulename.split('.',1)[0]
-                    info = _register_piece(namespace,journal,modulename,
-                                           topname,None,topname)
-                else:
-                    info = _register_piece(namespace,journal,modulename,
-                                           modulename,None,asname)
-                attachments.append(info)
+                _register_record(
+                    _ImportNameRecord(modulename) if asname is None
+                    else _ImportNameAsRecord(modulename, asname),
+                    namespace, records, attachments)
 
         elif isinstance(stmt,ast.ImportFrom):
             #
-            # Case 3: from [.*] a.b.c import * -->
-            #     track absolute(.* a.b.c)
-            #     rebind absolute(.* a.b.c).* as _
-            #
-            # Case 4: from .* a.b.c import x -->
-            #     track absolute(.* a.b.c)
-            #     rebind absolute(.* a.b.c).x as x
-            #
-            # Case 5: from [.*] a.b.c import x as y -->
-            #     track absolute(.* a.b.c)
-            #     rebind absolute(.* a.b.c).x as y
-            #
-            # PLUS for cases 4 and 5, if it turns out absolute(.* a.b.c).x is a
-            # module, track(absolute(.* a.b.c).x)
+            # Case 3: from [.*] a.b.c import *
+            # Case 4: from [.*] a.b.c import x [ as y ], ...
             #
             modulename = _absolute_module(stmt,package)
-            for alias in stmt.names:
-                name = alias.name
-                asname = alias.asname
-                if name == '*':
-                    info = _register_piece(namespace,journal,modulename,
-                                           modulename,'*',None)
-                else:
-                    if asname is None: asname = name
-                    info = _register_piece(namespace,journal,modulename,
-                                           modulename,name,asname)
-                    value = getattr(info.module,name)
-                    if isinstance(value,ModuleType):
-                        attachments.append(_track(value))
-                attachments.append(info)
+            if len(stmt.names) == 1 and stmt.names[0].name == '*':
+                record = _ImportFromStarRecord(modulename)
+            else:
+                record = _ImportFromNamesRecord(modulename,
+                    [ (a.name, a.name if a.asname is None else a.asname)
+                      for a in stmt.names ])
+            _register_record(record,namespace,records,attachments)
         elif not allow_other_statements:
             bad = ast.get_source_segment(source,stmt)
             raise ValueError("Expected only imports, found " +
@@ -607,9 +463,9 @@ def register(namespace:dict[str,Any], importstmts:str,
         for info in _MODULE_TABLE.values():
             if nsid in info.attachedto:
                 info.attachedto.remove(nsid)
-        nsinfo.journal = []
+        nsinfo.journal = _ImportJournal()
 
-    if not journal:
+    if not records:
         if clear and nsinfo is not None:
             del _NAMESPACE_TABLE[nsid]
         return
@@ -626,8 +482,7 @@ def register(namespace:dict[str,Any], importstmts:str,
     for info in attachments:
         info.attachedto.add(nsid)
 
-    (combined := nsinfo.journal).extend(journal)
-    nsinfo.journal = _journal_compact(combined)
+    nsinfo.journal.extend(records)
 
     #
     # Newly tracked modules may have additional indirect imports.
@@ -749,7 +604,7 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
         module = info.module
         try:
             reload(module)
-        except BaseException as ex:
+        except Exception as ex:
             reload_error = ex
             break
         if observer is not None:
@@ -769,7 +624,10 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
 
     for nsid in affected:
         nsinfo = _NAMESPACE_TABLE[nsid]
-        _journal_apply(nsinfo.journal,nsinfo.namespace)
+        try:
+            nsinfo.journal.apply(nsinfo.namespace)
+        except _ImportIssue as ex:
+            raise RuntimeError(ex.issue)
 
     if reload_error is not None:
         raise ModuleError(info.module.__name__,"reload") from reload_error

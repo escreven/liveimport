@@ -80,9 +80,9 @@ LiveImport requires Python 3.10 or greater and IPython 7.23.1 or greater.
 ## Reliability
 
 LiveImport includes automated tests with 100% code coverage, which are run on
-MacOS, Linux, and Windows with Python 3.10, 3.11, 3.12, 3.13, and 3.14 using
-both the oldest supported and latest versions of IPython.  Notebook integration
-features are tested using notebook 5.7.0 and notebook latest.  See [the GitHub
+MacOS, Linux, and Windows with Python versions 3.10 through 3.15 using both the
+oldest supported and latest versions of IPython.  Notebook integration features
+are tested using notebook 5.7.0 and notebook latest.  See [the GitHub
 workflow](https://github.com/escreven/liveimport/blob/main/.github/workflows/test.yml)
 for details.
 

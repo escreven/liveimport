@@ -23,6 +23,7 @@ from ._core import _MODULE_TABLE
 
 from ._debug import (
     _dump, _is_registered, _is_tracked,
-    _hash_state, _clear_all_state, _verify)
+    _hash_state, _clear_all_state, _verify,
+    _reload_liveimport)
 
 from ._workspace import _WORKSPACE
