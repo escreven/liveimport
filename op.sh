@@ -54,9 +54,18 @@ function sdist_file {
     echo "dist/liveimport-$1.tar.gz"
 }
 
+function autoload_wheel_file {
+    echo "dist/liveimport_autoload-$1-py3-none-any.whl"
+}
+
+function autoload_sdist_file {
+    echo "dist/liveimport_autoload-$1.tar.gz"
+}
+
 #
 # Succeed iff all version markers in the project are identical (currently in
-# pyproject.toml and __init__.py.)  Output is the consistent version.
+# pyproject.toml, __init__.py, autoload/pyproject.toml, and the pins between
+# liveimport and liveimport-autoload.)  Output is the consistent version.
 #
 
 function require_consistent_version {
@@ -79,6 +88,39 @@ function require_consistent_version {
     [[ $pyproject_version == "$python_version" ]] \
         || fail "Version mismatch: pyproject.toml ($pyproject_version)" \
                 "!= src/liveimport/__init__.py ($python_version)"
+
+    local autoload_version
+    autoload_version=$(\
+        sed -n 's/^version = "\([^"][^"]*\)"/\1/p' autoload/pyproject.toml)
+
+    [[ -z $autoload_version ]] \
+        && fail "Could not find version in autoload/pyproject.toml"
+
+    [[ $autoload_version == "$python_version" ]] \
+        || fail "Version mismatch: autoload/pyproject.toml ($autoload_version)" \
+                " != src/liveimport/__init__.py ($python_version)"
+
+    local optional_pin
+    optional_pin=$(\
+        sed -n 's/.*"liveimport-autoload ==\([^"]*\)",\?/\1/p' pyproject.toml)
+
+    [[ -z $optional_pin ]] \
+        && fail "Could not find version in pyproject.toml/optional-dependencies"
+
+    [[ $optional_pin == "$python_version" ]] \
+        || fail "Version mismatch: pyproject.toml/optional-dependencies ($optional_pin)" \
+                " != src/liveimport/__init__.py ($python_version)"
+
+    local liveimport_pin
+    liveimport_pin=$(\
+        sed -n 's/.*"liveimport ==\([^"]*\)",\?/\1/p' autoload/pyproject.toml)
+
+    [[ -z $liveimport_pin ]] \
+        && fail "Could not find version in autoload/pyproject.toml/dependencies"
+
+    [[ $liveimport_pin == "$python_version" ]] \
+        || fail "Version mismatch: autoload/pyproject.toml/dependencies ($liveimport_pin)" \
+                " != src/liveimport/__init__.py ($python_version)"
 
     echo "$python_version"
 }
@@ -143,7 +185,8 @@ function require_good_build {
 
     [[ -d dist ]] || fail "Distribution directory dist/ does not exist"
 
-    [[ -f $(wheel_file $version) && -f $(sdist_file $version) ]] \
+    [[ -f $(wheel_file $version) && -f $(sdist_file $version) \
+       && -f $(autoload_wheel_file $version) && -f $(autoload_sdist_file $version) ]] \
         || fail "Version $version not built"
 
     #
@@ -154,12 +197,15 @@ function require_good_build {
     local count
     count=$(ls dist/*.whl 2>/dev/null | wc -l)
 
-    [[ $count -eq 1 ]] || fail "Expected one built version; found" "$count"
+    [[ $count -eq 2 ]] \
+        || fail "Expected two wheels (liveimport and liveimport-autoload); found $count"
 
     local version=$1
     $PYTHON -m twine check \
             "$(wheel_file "$version")" \
             "$(sdist_file "$version")" \
+            "$(autoload_wheel_file "$version")" \
+            "$(autoload_sdist_file "$version")" \
         || fail "Twine check failed"
 }
 
@@ -198,12 +244,13 @@ function require_git_clean {
 }
 
 #
-# Require the top-level README.md to be in a deployable state.  For now that
-# just means it contains no relative links.
+# Require the top-level README.md and autoload/README.md to be in a deployable
+# state.  For now that just means they contain no relative links.
 #
 
 function require_deployable_README {
     $PYTHON README-check.py || fail "README.md is not deployable"
+    (cd autoload && $PYTHON ../README-check.py) || fail "autoload/README.md is not deployable"
 }
 
 #
@@ -260,9 +307,10 @@ function build_doc {
 }
 
 #
-# Build the wheel and sdist files.  The current project version must be
-# different than any released version.  build_dist removes the left-over
-# egg-info directory.  Hopefully build will stop leaving it behind one day.
+# Build the wheel and sdist files for both liveimport and liveimport-autoload.
+# The current project version must be different than any released version.
+# build_dist removes the left-over egg-info directories.  Hopefully build will
+# stop leaving them behind one day.
 #
 
 function build_dist {
@@ -275,12 +323,20 @@ function build_dist {
 
     /bin/rm -f dist/*.whl dist/*.tar.gz
 
-    echo "Building version $version"
+    echo "Building liveimport version $version"
     $PYTHON -m build
+
+    echo "Building liveimport-autoload version $version"
+    $PYTHON -m build autoload --outdir dist
 
     if [[ -d src/liveimport.egg-info ]]; then
         echo "Deleting egg-info"
         /bin/rm -r -f src/liveimport.egg-info
+    fi
+    
+    if [[ -d autoload/liveimport_autoload.egg-info ]]; then
+        echo "Deleting autoload/egg-info"
+        /bin/rm -r -f autoload/liveimport_autoload.egg-info
     fi
 }
 
@@ -366,7 +422,8 @@ upload_dist() {
     fi
 
     $PYTHON -m twine upload --repository "$repo" \
-        "$(wheel_file $version)" "$(sdist_file $version)"
+        "$(wheel_file $version)" "$(sdist_file $version)" \
+        "$(autoload_wheel_file $version)" "$(autoload_sdist_file $version)"
 }
 
 #
@@ -380,7 +437,8 @@ usage() {
     echo
     echo "    report-coverage     Measure and report test coverage"
     echo "    build-doc           Build the documentation"
-    echo "    build-dist          Build wheel and sdist files in dist/"
+    echo "    build-dist          Build wheel and sdist files in dist/ for"
+    echo "                        liveimport and liveimport-autoload"
     echo "    check-version       Verify and print consistent project version"
     echo "    check-dist          Verify the distribution files"
     echo "    check-clean-main    Verify local repo is on clean main branch"
