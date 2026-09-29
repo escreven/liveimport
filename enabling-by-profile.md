@@ -1,4 +1,4 @@
-## Enabling by Default
+## Enabling by Profile
 
 LiveImport is enabled in a notebook session when it's first imported.  That
 means by default the first cell of a notebook cannot usefully be a
