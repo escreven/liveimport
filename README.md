@@ -65,10 +65,10 @@ $ pip install liveimport
 ```
 
 LiveImport is normally enabled by importing it into a notebook.  But you can
-also enable by default [using a
+also enable it by default [using a
 profile](https://github.com/escreven/liveimport/blob/main/enabling-by-profile.md)
-or installing the `autoload`
-[extra](https://github.com/escreven/liveimport/blob/main/autoload/README.md).
+or installing the [autoload
+extra](https://github.com/escreven/liveimport/blob/main/autoload/README.md).
 
 ```console
 $ pip install "liveimport[autoload]"
