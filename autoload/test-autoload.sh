@@ -70,6 +70,7 @@ EOF
 
 [[ $# == 1 || $# == 2 ]] \
     || fail "Usage: $0 PYTHON_VERSION [IPYTHON_VERSION] (Example: 3.14 9.17.1)"
+
 [[ $1 =~ ^[0-9]+\.[0-9]+$ ]] \
     || fail "Python version must have the form MAJOR.MINOR"
 
@@ -79,6 +80,7 @@ if [[ $# == 2 ]]; then
     [[ -n $2 ]] || fail "IPython version must not be empty"
     ipython_package="IPython==$2"
 fi
+
 command -v "python$version" > /dev/null \
     || fail "Could not find python$version on PATH"
 
@@ -87,6 +89,7 @@ repo=$PWD
 
 tempdir=$(mktemp -d "${TMPDIR:-/tmp}/liveimport-autoload.XXXXXXXX") \
     || fail "Could not create temporary directory"
+
 trap cleanup EXIT
 trap 'fail "Interrupted"' HUP INT TERM
 
@@ -96,20 +99,27 @@ trap 'fail "Interrupted"' HUP INT TERM
 #
 
 unset PYTHONPATH PYTHONHOME LIVEIMPORT_NO_AUTOLOAD
+
 export IPYTHONDIR="$tempdir/ipython"
 export PIP_CACHE_DIR="$tempdir/pip-cache"
 export PYTHONNOUSERSITE=1
+
 mkdir -p "$tempdir/source/autoload" "$IPYTHONDIR" \
     || fail "Could not create temporary source and configuration directories"
+
 cp "$repo/pyproject.toml" "$repo/README.md" "$tempdir/source/" \
     || fail "Could not copy LiveImport package metadata"
+
 cp -R "$repo/src" "$tempdir/source/" \
     || fail "Could not copy LiveImport source"
+
 cp "$repo/autoload/pyproject.toml" "$repo/autoload/README.md" \
         "$tempdir/source/autoload/" \
     || fail "Could not copy autoload package metadata"
+
 cp -R "$repo/autoload/startup" "$tempdir/source/autoload/" \
     || fail "Could not copy autoload startup file"
+
 cd "$tempdir" || fail "Could not enter temporary directory"
 
 #
@@ -129,6 +139,7 @@ startup="$venv/etc/ipython/startup/00-liveimport.py"
 
 "$PYTHON" -m pip install "$tempdir/source/autoload" \
     || fail "Could not install liveimport-autoload"
+
 [[ -f $startup ]] || fail "Autoload startup file was not installed at $startup"
 
 #
@@ -146,6 +157,7 @@ require_silent_startup "before installing IPython"
 
 "$PYTHON" -m pip install --upgrade "$ipython_package" \
     || fail "Could not install $ipython_package"
+
 require_silent_startup "after installing IPython"
 require_autoload False "before installing LiveImport"
 
@@ -156,6 +168,7 @@ require_autoload False "before installing LiveImport"
 
 "$PYTHON" -m pip install "$tempdir/source" \
     || fail "Could not install LiveImport"
+
 require_autoload True "after installing LiveImport"
 
 #
@@ -183,6 +196,7 @@ LIVEIMPORT_NO_AUTOLOAD=FaLsE \
 
 "$PYTHON" -m pip uninstall -y liveimport-autoload \
     || fail "Could not uninstall liveimport-autoload"
+
 require_autoload False "after uninstalling liveimport-autoload"
 
 echo "Done."
