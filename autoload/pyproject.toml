@@ -4,14 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "liveimport-autoload"
-version = "1.2.7dev1"
+version = "1.0.0"
 description = "Import LiveImport automatically when IPython and Jupyter kernels start."
 readme = "README.md"
 authors = [{ name = "Edward Screven" }]
 license = "MIT"
 requires-python = ">=3.10"
 dependencies = [
-    "liveimport ==1.2.7dev1"
 ]
 keywords = ["notebook", "jupyter", "ipython", "import", "reload", "autoreload"]
 classifiers = [
@@ -24,6 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 

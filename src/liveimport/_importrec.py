@@ -10,12 +10,6 @@ from typing import Any
 # rebind(namespace) method executing the name binding actions of the
 # corresponding import statements with respect to the target namespace.
 #
-# An import record can be eager (example: _ImportNameAsRecorc) or lazy
-# (example: _LazyImportNameAsRecord).  Eager rebind steps correspond to imports
-# of modules known to be loaded (Python <= 3.14 imports, or non-lazy or reified
-# Python >= 3.15 imports).  Lazy rebind steps correspond to imports of lazily
-# imported modules not yet known to be loaded.
-#
 
 class _ImportJournal:
     __slots__ = "sequence"
@@ -115,7 +109,6 @@ def _require_name(namespace:dict[str,Any], name:str) -> None:
 
 
 def _validate_hierarchy(modulename:str) -> None:
-    modules = sys.modules
     hierarchy = modulename.split('.')
     parentname = hierarchy[0]
     parent = _require_module(parentname)

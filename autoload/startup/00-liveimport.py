@@ -4,19 +4,36 @@ IPython startup file installed by the liveimport-autoload package.
 Imports LiveImport at kernel startup so notebooks can use ``%%liveimport`` or
 ``#_%%liveimport`` in their very first cell, with no bootstrap import.  Install
 with ``pip install liveimport[autoload]``; disable permanently with ``pip
-uninstall liveimport-autoload``, or for one kernel by setting
-LIVEIMPORT_NO_AUTOLOAD=1 in its environment.
+ininstall liveimport-autoload``.
+
+The startup file does nothing if the Python runtime does not include an IPython
+interactive shell, LiveImport is not installed, or LIVEIMPORT_NO_AUTOLOAD is in
+the environment with any value other than "0" or "false" (by case-insenstive
+comparison).
 """
 
 def _liveimport_autoload():
+
     import os
-    if os.environ.get("LIVEIMPORT_NO_AUTOLOAD", "") not in ("", "0", "false"):
+    no_autoload = os.environ.get("LIVEIMPORT_NO_AUTOLOAD")
+    if no_autoload is not None and no_autoload.lower() not in ("0", "false"):
         return
+
     try:
-        import IPython
-        if IPython.get_ipython() is None: #type:ignore
-            return
-        import liveimport  # noqa: F401
+        try:
+            import IPython
+            if IPython.get_ipython() is None:
+                return
+        except ModuleNotFoundError as ex:
+            if ex.name == "IPython":
+                return
+
+        try:
+            import liveimport
+        except ModuleNotFoundError as ex:
+            if ex.name == "liveimport":
+                return
+
     except Exception:
         import warnings
         warnings.warn("LiveImport autoload failed", RuntimeWarning)

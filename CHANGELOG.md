@@ -1,5 +1,12 @@
 ## Unreleased
 
+#### Added
+- Extra `autoload` (implemented by package `liveimport-autoload`) adds a
+  startup file that enables LiveImport in notebooks by default, meaning the
+  first cell of a notebook can be a `%%liveimport` or `#_%%liveimport` cell.
+  Contributed by [@lukas-lang](https://github.com/lukas-lang)
+  ([#49](https://github.com/escreven/liveimport/pull/49)).
+
 #### Changed
 - [Coverage](https://coverage.readthedocs.io/en/7.16.1/) option ``--branch`` is
   now used for the `op.sh` coverage reports and GitHub workflows, strengthening

@@ -8,7 +8,7 @@ from os.path import exists, getmtime
 from importlib import reload
 from importlib.machinery import ModuleSpec
 from types import ModuleType
-from typing import Any, Callable, NoReturn
+from typing import Any, Callable
 
 from ._workspace import _in_workspace
 from ._importrec import _ImportJournal, _ImportRecord, _ImportIssue
