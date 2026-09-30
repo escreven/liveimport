@@ -1,5 +1,7 @@
 ## Unreleased
 
+## [1.2.7] - 2026-09-29
+
 #### Added
 - Extra `autoload` (implemented by package `liveimport-autoload`) adds a
   startup file that enables LiveImport in notebooks by default, meaning the
