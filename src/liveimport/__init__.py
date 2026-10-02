@@ -4,14 +4,12 @@ See `the user guide
 <https://liveimport.readthedocs.io/en/latest/userguide.html>`_.
 """
 
-from __future__ import annotations
-
-__version__ = "1.2.7"
+__version__ = "1.3.0dev1"
 
 __all__ = ("register", "sync", "auto_sync", "hidden_cell_magic",
            "ReloadEvent", "ModuleError", "workspace")
 
-from ._core import register, sync, ReloadEvent, ModuleError
+from ._core import register, sync, poll_lazy_imports, ReloadEvent, ModuleError
 from ._nbi import auto_sync, hidden_cell_magic
 from ._workspace import workspace
 
@@ -19,7 +17,7 @@ from ._workspace import workspace
 # Pull up for debugging and testing
 #
 
-from ._core import _MODULE_TABLE
+from ._core import _MODULE_TABLE, _REIFY_WATCH, _is_lazy
 
 from ._debug import (
     _dump, _is_registered, _is_tracked,

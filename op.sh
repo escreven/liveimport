@@ -214,10 +214,10 @@ function report_coverage {
 
     $PYTHON -m coverage run --branch \
         --data-file .coverage.main \
-        --include 'src/liveimport/*.py' test/main.py
+        --include 'src/liveimport/*.py' test/main.py*
 
-    [[ -f .coverage.main      ]] || fail "Can't find main coverage data"
-    [[ -f .coverage.notebook  ]] || fail "Can't find notebook coverage data"
+    [[ -f .coverage.main     ]] || fail "Can't find main coverage data"
+    [[ -f .coverage.notebook ]] || fail "Can't find notebook coverage data"
     compgen -G ".coverage.bootstrap-*" || \
         fail "Can't find bootstrap coverage data"
 
@@ -374,9 +374,11 @@ upload_dist() {
 #
 
 usage() {
-    echo "Usage: $0 ACTION"
+    echo "Usage: $0 [ --python=PYTHON ] ACTION"
     echo
-    echo "Where ACTION is one of"
+    echo "Where PYTHON is a Python interpreter command or path"
+    echo
+    echo "and ACTION is one of"
     echo
     echo "    report-coverage     Measure and report test coverage"
     echo "    build-doc           Build the documentation"
@@ -413,6 +415,14 @@ cd "$(dirname "$BASH_SOURCE")"
 
 grep -qE 'name\s*=\s*"liveimport"' pyproject.toml \
     || fail "Project name is not liveimport."
+
+if [[ $# > 0 && $1 =~ --python=(.*) ]]; then
+    PYTHON="${BASH_REMATCH[1]}"
+    shift
+    echo
+    echo "Will use $($PYTHON --version)"
+    echo
+fi
 
 #
 # Dispatch

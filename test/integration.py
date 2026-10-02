@@ -10,6 +10,8 @@ import os
 import re
 import coverage
 
+from setup import REAL_LAZY_IMPORTS
+
 #
 # This module tests LiveImport's notebook integration.  It runs the cells of
 # notebook.ipynb which must be in the same directory as this and the other test
@@ -27,8 +29,8 @@ import coverage
 #
 
 _PRESLEEP_DECL_RE  = re.compile(r"#@\s*presleep\s+([0-9.]+)\s*")
-_RELOAD_DECL_RE    = re.compile(r"#@\s*reload\s+(\w+)\s*")
-_ERROR_DECL_RE     = re.compile(r"#@\s*error\s+(\w+)\s*")
+_RELOAD_DECL_RE    = re.compile(r"#@\s*reload\s+([\w.]+)\s*")
+_ERROR_DECL_RE     = re.compile(r"#@\s*error\s+([\w.]+)\s*")
 _MISSINGOK_DECL_RE = re.compile(r"#@\s*missingok\s*")
 
 class _Declarations:
@@ -74,7 +76,7 @@ class _Declarations:
 # Portions of the output of one executed code cell relevant to the tester.
 #
 
-_RELOADED_LINE_RE = re.compile(r"^Reloaded (\w+) ")
+_RELOADED_LINE_RE = re.compile(r"^Reloaded ([\w.]+) ")
 
 class _Found:
 
@@ -200,7 +202,7 @@ _COVERAGE_START = """
 import coverage
 coverage_object = coverage.Coverage(
     branch=True,
-    data_file="../.coverage.notebook",
+    data_file="../.coverage.{}",
     include="../src/liveimport/*.py")
 coverage_object.start()
 """
@@ -211,7 +213,7 @@ coverage_object.save()
 ok()
 """
 
-def _prepare(nb:NotebookNode):
+def _prepare(nb:NotebookNode, notebook:str):
 
     for cell in nb.cells:
         if hasattr(cell,'outputs'):
@@ -224,7 +226,7 @@ def _prepare(nb:NotebookNode):
 
     coverage_active = coverage.Coverage.current() is not None
 
-    source = _COVERAGE_START if coverage_active else ''
+    source = _COVERAGE_START.format(notebook) if coverage_active else ''
     source += setup_cell.source
     source += '\nSCRIPTED_TEST = True\n'
     setup_cell.source = source
@@ -233,27 +235,39 @@ def _prepare(nb:NotebookNode):
         nb.cells.append(nbformat.v4.new_code_cell(_COVERAGE_END))
 
 
-def test_notebook(verbose:bool=False):
-    """
-    Verify notebook integration.
-    """
+def _test(notebook:str, verbose:bool=False):
     if '__file__' not in globals():
         raise RuntimeError("Notebook integration test requires __file__")
 
     dir = os.path.dirname(__file__)
     if not dir: dir = '.'
-    filename = dir + '/notebook.ipynb'
+    filename = f"{dir}/{notebook}.ipynb"
 
     config = Config()
     config.InteractiveShell.colors = 'NoColor'
 
     nb = nbformat.read(filename,as_version=4)
-    _prepare(nb)
+    _prepare(nb,notebook)
 
     _TestbenchPreprocessor(config, verbose).preprocess(
         nb, resources={ "metadata": { "path": dir } })
 
     return nb
+
+
+def test_notebook(verbose:bool=False):
+    """
+    Verify notebook integration.
+    """
+    return _test("notebook", verbose)
+
+
+if REAL_LAZY_IMPORTS:
+    def test_notebook_lazy(verbose:bool=False):
+        """
+        Verify notebook integration when lazy imports are used.
+        """
+        return _test("notebook-lazy", verbose)
 
 
 #
@@ -271,6 +285,10 @@ if __name__ == '__main__':
     parser.add_argument("-verbose",action="store_true",
         help="Print detailed information for every cell")
 
+    parser.add_argument("which", nargs='?',
+        choices=["notebook", "notebook-lazy"], default="notebook",
+        help="Which notebook to run")
+
     args = parser.parse_args()
 
-    test_notebook(args.verbose)
+    _test(args.which,args.verbose)

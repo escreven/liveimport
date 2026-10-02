@@ -120,6 +120,18 @@ jobs:
         run: |
           python test/main.py -failstop
 
+      - name: Checkout Autoload Action
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          path: .autoload-action
+          sparse-checkout: .github/actions/check-autoload
+
+      - name: Check Autoload
+        uses: ./.autoload-action/.github/actions/check-autoload
+        with:
+          repository: PyPI
+
   full:
     name: Full
     needs: [detect, canary]
@@ -164,6 +176,18 @@ jobs:
         shell: bash
         run: |
           python test/main.py -failstop
+
+      - name: Checkout Autoload Action
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          path: .autoload-action
+          sparse-checkout: .github/actions/check-autoload
+
+      - name: Check Autoload
+        uses: ./.autoload-action/.github/actions/check-autoload
+        with:
+          repository: PyPI
 
   mark_seen:
     name: Mark versions as successfully tested

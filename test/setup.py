@@ -12,21 +12,26 @@ import sys
 import textwrap
 import time
 import tempfile
-from typing import Any
+from typing import Any, Callable
 import liveimport
 from liveimport import ReloadEvent
 from liveimport import _hash_state as hash_state
 from liveimport import _is_tracked as is_tracked
+from liveimport import _REIFY_WATCH
+from liveimport import _is_lazy as is_lazy
 
 __all__ = [
     "modify_module", "restore_module", "revised_module",
     "deleted_module",
-    "touch_module",
-    "is_registered_fn", "is_tracked", "hash_state",
-    "get_tag", "next_tag", "expect_tag",
+    "touch_module", "touch_file",
+    "is_registered_fn", "is_tracked", "is_lazy", "hash_state",
+    "get_tag", "next_tag", "expect_tag", "is_reify_watched",
     "reload_list", "reload_clear", "reload_observe", "reload_expect",
     "root", "keep_tempdir", "describe_environment",
+    "REAL_LAZY_IMPORTS"
 ]
+
+REAL_LAZY_IMPORTS = sys.version_info >= (3,15)
 
 
 # =============================================================================
@@ -60,6 +65,10 @@ __all__ = [
 # See also setup_imports.py which contains import statements referencing the
 # generated modules.  Test modules include "from setup_imports import *" to
 # define names on which the tests depend.
+#
+# The "su<n>a" packages are an exception.  "su" stands for "single use".  They
+# are used to test lazy imports, and are only imported once by those tests so
+# their initial state is guaranteed to be unloaded.
 # =============================================================================
 
 def _hierarchy():
@@ -69,6 +78,18 @@ def _hierarchy():
 
     def file(name:str,**properties):
         return _Node(kind='file',name=name,properties=properties)
+
+    def su(n:int, *lazy_imports:tuple[str,str]):
+        imports = [ f"import {modulename} as {asname}"
+                    for modulename, asname in lazy_imports ]
+        if imports:
+            imports.insert(0,"__lazy_modules__ = [{}]".format(
+                    ", ".join(f"'{modulename}'"
+                    for modulename, _ in lazy_imports)))
+        return dir(f"su{n}a",
+            dir("b",
+                file("__init__"),
+                file("y",imports=imports)))
 
     return dir("",
         file("mod1"),
@@ -107,7 +128,14 @@ def _hierarchy():
         dir("subdir2",
             file("mod9"),
             dir("nspkg",
-                file("mod10"))))
+                file("mod10"))),
+        su(1),
+        su(2),
+        su(3),
+        su(4, ("su5a.b.y", "su5aby")),
+        su(5, ("su6a.b.y", "su6aby"), ("su7a.b.y", "su7aby")),
+        su(6),
+        su(7))
 
 #
 # setup.py must not be reloaded.
@@ -122,6 +150,13 @@ except NameError:
 #
 # Source for a module.
 #
+
+_INIT_TEMPLATE="""
+try: _tag = (_tag[0],_tag[1]+1)
+except: _tag = ('{modulename}',1)
+x='{modulename}'
+{postscript}
+"""
 
 _MODULE_TEMPLATE="""
 import re
@@ -141,6 +176,11 @@ def _functions(basename:str, public:bool, count:int):
     tail = 'public' if public else 'private'
     return '\n'.join(f"def {prefix}{basename}_{tail}{n}(): pass"
                      for n in range(1,count+1))
+
+def _init_src(modulename:str, postscript:str=""):
+    return _INIT_TEMPLATE.format(
+        modulename=modulename,
+        postscript=textwrap.dedent(postscript))
 
 def _module_src(modulename:str, public_count:int=3, private_count:int=3,
                 imports:list[str]=[], all:list[str]|None=None,
@@ -196,11 +236,11 @@ class _Node:
                 child.create(self.path, module_prefix)
         else:
             self.path = parent_path + '/' + self.name + '.py'
+            modulename = module_prefix + self.name
             with open(self.path,"w") as f:
                 if self.name == '__init__':
-                    f.write("")
+                    f.write(_init_src(modulename,**self.properties))
                 else:
-                    modulename = module_prefix + self.name
                     _Node.module_nodes[modulename] = self
                     f.write(_module_src(modulename,**self.properties))
                 _TEMPFILES.append(self.path)
@@ -375,6 +415,15 @@ def touch_module(modulename:str, sleep:float=0.05):
     os.utime(_module_filename(modulename))
     time.sleep(sleep)
 
+#
+# Change a root() relative file's modification time to the current time,
+# sleeping for the specified number of seconds afterward.
+#
+
+def touch_file(filename:str, sleep:float=0.05):
+    os.utime(root() + '/' + filename)
+    time.sleep(sleep)
+
 
 
 # =============================================================================
@@ -393,6 +442,13 @@ def is_registered_fn(module_globals:dict[str,Any]):
         if namespace is None: namespace = module_globals
         return liveimport._is_registered(namespace,modulename,name,asname)
     return body
+
+#
+# Return True iff the named module is in _REIFY_WATCH.
+#
+
+def is_reify_watched(modulename:str) -> bool:
+    return modulename in _REIFY_WATCH
 
 #
 # For verifying reloads.  Typical use:

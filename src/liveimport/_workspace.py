@@ -46,8 +46,8 @@ def workspace(*directories:str|PathLike) -> None:
     a workspace directory.
 
     The default workspace is the current working directory when the LiveImport
-    module is imported.  Thus, when LiveImport is used in a notebook, the
-    workspace is the directory containing the notebook.
+    module is imported.  Thus in normal use, when LiveImport is used in a
+    notebook, the workspace is the directory containing the notebook.
 
     :param directories: Zero or more path strings or path-like objects.  Each
         path must identify an existing directory.
@@ -76,7 +76,7 @@ def workspace(*directories:str|PathLike) -> None:
     .. note::
         Changing the workspace does not alter tracking decisions LiveImport has
         already made.  It only affects future decisions.  If you want a
-        non-default workspace, its best to change it before registering any
+        non-default workspace, it's best to change it before registering any
         imports.
     """
     global _WORKSPACE
