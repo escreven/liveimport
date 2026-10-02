@@ -2,8 +2,8 @@
 
 LiveImport is enabled in a notebook session when it's first imported.  That
 means by default the first cell of a notebook cannot be a `%%liveimport` or
-`#_%%liveimport` cell.  You can change that by using IPython profiles to import
-LiveImport at startup.
+`#_%%liveimport` cell.  One way to change that by using IPython profiles to
+import LiveImport at startup.
 
 First, use the `ipython` command to [create a profile](https://ipython.readthedocs.io/en/stable/config/intro.html)
 if you don't have one.  You can create a default profile with
@@ -38,3 +38,6 @@ they start, before any cell is run, as long as `liveimport` is installed in the
 execution environment.  The first cell of a notebook can then be a
 `%%liveimport` cell, and notebooks using LiveImport need not include an `import
 liveimport` statement at all.
+
+(See also the [autoload
+extra](https://github.com/escreven/liveimport/blob/main/autoload/README.md).)

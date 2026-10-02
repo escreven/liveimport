@@ -27,8 +27,10 @@ digraph LiveImportState {
 
   watched [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#94a3b8"><TR><TD BGCOLOR="#f1f5f9"><B>_REIFY_WATCH entry</B></TD></TR><TR><TD>str</TD></TR></TABLE>>];
 
+  watched->pyModule [style=invis]
+
   {rank=same; module; ns;}
-  {rank=same; pyModule; journal; namespace;}
+  {rank=same; watched; pyModule; journal; namespace;}
   module -> ns [style=dashed, label="attachedto · 0..* namespace IDs\nvia _NAMESPACE_TABLE[id(namespace)]"];
   module:w -> module:nw [style=dashed, label="dependencies · 0..* names\nvia _MODULE_TABLE.get(name)\nonly tracked names resolve"];
   module -> pyModule [label="module · 1 object"];

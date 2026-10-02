@@ -12,7 +12,7 @@ import sys
 import textwrap
 import time
 import tempfile
-from typing import Any, Callable
+from typing import Any
 import liveimport
 from liveimport import ReloadEvent
 from liveimport import _hash_state as hash_state

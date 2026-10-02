@@ -3,5 +3,5 @@ DIAGRAMS = model-diagram
 
 all: $(DIAGRAMS:%=%.svg)
 
-%.svg: %.dot
+%.svg: %.gv
 	${DOT} $< -Tsvg -o $@
