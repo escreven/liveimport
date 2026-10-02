@@ -1,0 +1,40 @@
+digraph LiveImportState {
+  graph [rankdir=TB, bgcolor="white", pad="0.35", nodesep="0.65", ranksep="0.7", fontname="Helvetica", fontsize=20, outputorder=edgesfirst];
+  node [shape=plain, fontname="Helvetica", fontsize=12];
+  edge [fontname="Helvetica", fontsize=11, color="#41566e", fontcolor="#334155", arrowsize=0.8];
+
+  module [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#506985">
+    <TR><TD BGCOLOR="#e5edf7"><B>_ModuleInfo</B></TD></TR>
+    <TR><TD ALIGN="LEFT">module: ModuleType<BR ALIGN="LEFT"/>file: str | None<BR ALIGN="LEFT"/>parent: str<BR ALIGN="LEFT"/>mtime: float<BR ALIGN="LEFT"/>attachedto: set[int]<BR ALIGN="LEFT"/>dependencies: list[str]<BR ALIGN="LEFT"/>next_mtime: float<BR ALIGN="LEFT"/>mark: int<BR ALIGN="LEFT"/></TD></TR>
+  </TABLE>>];
+  ns [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#506985">
+    <TR><TD BGCOLOR="#e5edf7"><B>_NamespaceInfo</B></TD></TR>
+    <TR><TD ALIGN="LEFT">namespace: dict[str, Any]<BR ALIGN="LEFT"/>journal: _ImportJournal<BR ALIGN="LEFT"/></TD></TR>
+  </TABLE>>];
+  journal [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#506985">
+    <TR><TD BGCOLOR="#e5edf7"><B>_ImportJournal</B></TD></TR>
+    <TR><TD ALIGN="LEFT">sequence: list[_ImportRecord]</TD></TR>
+  </TABLE>>];
+  record [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#506985">
+    <TR><TD BGCOLOR="#e5edf7"><B>_ImportRecord</B> · abstract</TD></TR>
+    <TR><TD ALIGN="LEFT">modulename: str</TD></TR>
+    <TR><TD BGCOLOR="#f1f5f9" ALIGN="LEFT"><B>Concrete types · additional instance fields</B></TD></TR>
+    <TR><TD ALIGN="LEFT">_ImportNameRecord<BR ALIGN="LEFT"/>    topname: str<BR ALIGN="LEFT"/><BR ALIGN="LEFT"/>_ImportNameAsRecord<BR ALIGN="LEFT"/>    asname: str<BR ALIGN="LEFT"/><BR ALIGN="LEFT"/>_ImportFromNamesRecord<BR ALIGN="LEFT"/>    namepairs: list[tuple[str, str]]<BR ALIGN="LEFT"/><BR ALIGN="LEFT"/>_ImportFromStarRecord<BR ALIGN="LEFT"/>    no additional fields<BR ALIGN="LEFT"/></TD></TR>
+    <TR><TD BGCOLOR="#f8fafc" ALIGN="LEFT">All four inherit modulename.<BR ALIGN="LEFT"/>namepairs contains (name, bound name) pairs.</TD></TR>
+  </TABLE>>];
+  pyModule [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#94a3b8"><TR><TD BGCOLOR="#f1f5f9"><B>Python module object</B></TD></TR><TR><TD>ModuleType</TD></TR></TABLE>>];
+  namespace [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#94a3b8"><TR><TD BGCOLOR="#f1f5f9"><B>Target namespace</B></TD></TR><TR><TD>dict[str, Any]</TD></TR></TABLE>>];
+
+  watched [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#94a3b8"><TR><TD BGCOLOR="#f1f5f9"><B>_REIFY_WATCH entry</B></TD></TR><TR><TD>str</TD></TR></TABLE>>];
+
+  {rank=same; module; ns;}
+  {rank=same; pyModule; journal; namespace;}
+  module -> ns [style=dashed, label="attachedto · 0..* namespace IDs\nvia _NAMESPACE_TABLE[id(namespace)]"];
+  module:w -> module:nw [style=dashed, label="dependencies · 0..* names\nvia _MODULE_TABLE.get(name)\nonly tracked names resolve"];
+  module -> pyModule [label="module · 1 object"];
+  ns -> namespace [label="namespace · 1 dictionary"];
+  ns -> journal [dir=both, arrowtail=diamond, label="journal · 1 owned object"];
+  journal -> record [dir=both, arrowtail=diamond, label="sequence · 0..* owned records\nreferences in registration order"];
+  record -> pyModule [style=dashed, label="modulename · 1 name\nvia sys.modules[name]", constraint=false];
+  module -> watched [style=dashed, label="dependencies · *..* lazily\nimported modules names"]
+}

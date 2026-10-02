@@ -9,7 +9,7 @@ from IPython.core.error import UsageError
 from IPython.core.inputtransformer2 import TransformerManager
 from IPython.core.interactiveshell import InteractiveShell
 
-from ._core import ModuleError, sync, register
+from ._core import ModuleError, sync, register, poll_lazy_imports
 
 
 #
@@ -53,9 +53,7 @@ def _display_reload_events(events):
     display(Markdown(f"```console\n{text}\n```"))
 
 #
-# Handle pre and post cell run events to implement automatic syncing.  We avoid
-# reinstalling event handlers on module reload so the registrations don't
-# accumulate.
+# Handle pre and post cell run events to implement automatic syncing.
 #
 # We defer displaying reload reports when the first cell after a grace period
 # appears to be a bootstrap cell, a cell executed by a frontend to configure
@@ -109,6 +107,7 @@ class _LiveImportHandler:
             deferred_events.clear()
 
     def post_run_cell(self,result):
+        poll_lazy_imports()
         self.post_cell_time = time.monotonic()
 
 #
@@ -169,7 +168,7 @@ def auto_sync(enabled:bool|None=None,*,
         execution has expired.
 
     :param grace: The minimum time in seconds that must pass between the end of
-        one cell execution and the beginning of the another before LiveImport
+        one cell execution and the beginning of another before LiveImport
         will sync.  The grace period inhibits syncing between cell executions
         during a multi-cell run, such as running the entire notebook.
 
@@ -187,8 +186,8 @@ def hidden_cell_magic(enabled:bool|None=None) -> None:
     Configure hidden cell magic.
 
     :param enabled: Notebook cells that begin with ``#_%%liveimport`` run as if
-        they began with ``%%livemagic`` if and only if `enabled` is true.  This
-        makes LiveImport cell magic transparent to IDEs like Visual Studio
+        they began with ``%%liveimport`` if and only if `enabled` is true.
+        This makes LiveImport cell magic transparent to IDEs like Visual Studio
         Code, yet still function as desired.  Hidden cell magic is enabled by
         default.
     """

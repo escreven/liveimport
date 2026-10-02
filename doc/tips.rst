@@ -9,9 +9,36 @@ Enabling by Default
 ~~~~~~~~~~~~~~~~~~~
 
 LiveImport is enabled in a notebook session when it's first imported.  That
-means by default the first cell of a notebook cannot usefully be a
-``%%liveimport`` or ``#_%%liveimport`` cell.  However, you can change that by
-using IPython profiles to enable LiveImport at startup.
+means by default the first cell of a notebook cannot be a ``%%liveimport`` or
+``#_%%liveimport`` cell.  You can change that by installing the LiveImport
+``autoload`` extra or by using IPython profiles.
+
+The LiveImport ``autoload`` Extra
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Installing the ``autoload`` extra with
+
+.. code:: console
+
+    $ pip install "liveimport[autoload]"
+
+installs the package `liveimport-autoload
+<https://github.com/escreven/liveimport/tree/main/autoload>`_ which consists
+solely of an IPython startup file that loads LiveImport when IPython or Jupyter
+kernels start in the Python environment.
+
+To turn autoloading off, uninstall the package:
+
+.. code:: console
+
+    $ pip uninstall liveimport-autoload
+
+To disable autoloadng for a kernel without uninstalling, set
+``LIVEIMPORT_NO_AUTOLOAD=1`` in the kernel's environment before it starts.
+
+
+IPython Profiles
+^^^^^^^^^^^^^^^^
 
 First, use the ``ipython`` command to `create a profile
 <https://ipython.readthedocs.io/en/stable/config/intro.html>`_

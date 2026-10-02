@@ -44,7 +44,7 @@ Importantly, LiveImport *only* updates names in the same way the original
 import statements would.  If your notebook and ``symcode`` both happened to
 define a variable ``gamma``, reloading ``symcode`` would not overwrite your
 notebook's value of ``gamma``.  Though it isn't implemented this way, you can
-think of LiveImport as re-executing the registered import statements when a
+think of LiveImport as re-executing all registered import statements when any
 module reloads.
 
 Hidden Cell Magic
@@ -89,9 +89,9 @@ tracked modules and updating names is called syncing.
 
 There are two ways a module becomes tracked.  First, it can be referenced by a
 registered import statement.  In the **Overview** example, ``symcode``,
-``printmath``, and ``simulator`` are all tracked modules.  Second, a module in
-LiveImport's workspace (described below) that is referenced by a top-level
-import in a tracked module is itself tracked.
+``printmath``, and ``simulator`` are all tracked modules.  Second, a loaded
+module in LiveImport's workspace (described below) that is referenced by a
+top-level import in a tracked module is itself tracked.
 
 For example, suppose there is a module ``timeutils`` in the workspace that is
 imported by ``simulator``.  Then, even if ``timeutils`` is not mentioned in any
@@ -169,9 +169,9 @@ the cell the top-level import statements.  It then registers those statements
 and begins tracking the related modules, if they are not already tracked.
 
 LiveImport imposes no restrictions on the registered import statements: the
-statements can overlap, they can repeat, they can be any kind of import
-statement that is legal to use in a notebook.  For example, the following cell
-is perfectly fine.
+statements can overlap, they can repeat, they can be lazy, they can be any kind
+of import statement that is legal to use in a notebook.  For example, the
+following cell is perfectly fine.
 
   .. code:: python
 
@@ -225,6 +225,58 @@ automatically reloads modules in a notebook, something like
 
 You can disable these reports by calling
 :func:`auto_sync(report=False)<auto_sync>`.
+
+.. _lazy_imports:
+
+Lazy Imports
+------------
+
+Beginning with Python 3.15, imports can be `lazy
+<https://peps.python.org/pep-0810/>`_.  A lazy import statement defers loading
+a referenced module until the module object or its contents are required.  An
+import statement can be designated as lazy through the keyword ``lazy`` or
+through the ``__lazy_modules__`` global.  In the extreme, *all* non-wildcard
+imports can be made lazy through a command line option or environment variable.
+The process of resolving a lazy import is called reification.
+
+To avoid ambiguity and guarantee consistent reloading behavior before and after
+reification, LiveImport loads lazily imported modules when import statements
+referring to them are registered.  For example, suppose a notebook run by
+Python 3.15 has a cell
+
+  .. code:: python
+
+      __lazy_modules__ = [ "graphtypes", "gvdot" ]
+
+followed by
+
+  .. code:: python
+
+      #_%%liveimport --clear
+      import graphtypes
+      lazy from biconnected import is_biconnected
+      from sp import random_sp
+
+The ``graphtypes`` and ``biconnected`` imports will be lazy, and if those
+modules are not already loaded through some other path, LiveImport loads them
+during registration.  Subsequent imports of module ``gvdot`` will also be lazy
+and are unaffected by LiveImport.  The ``sp`` import is not lazy.
+
+Suppose the implementation of ``biconnected`` includes this import:
+
+  .. code:: python
+
+      lazy from generate import complete_graph
+
+LiveImport observes that ``biconnected`` depends on ``generate`` through a lazy
+import.  LiveImport does not require dependency modules to be loaded.  Instead,
+it records the dependency and defers tracking ``generate``.  If ``generate`` is
+later loaded, likely because of reification, LiveImport begins tracking
+``generate`` if it proves to be in the :ref:`workspace <workspace>`.
+
+LiveImport checks whether lazily imported dependency modules have loaded at the
+end of each cell execution or when an application calls
+:func:`poll_lazy_imports()`.
 
 Import Statement Order
 ----------------------
@@ -349,5 +401,5 @@ Outside of Notebooks
 --------------------
 
 You can use LiveImport outside of notebook environments, but in that case, you
-must use programmatic registration and explicitly sync via
-:func:`register()` and :func:`sync()` respectively.
+must use programmatic registration, explicitly sync, and poll lazy imports via
+:func:`register()`, :func:`sync()`, :func:`poll_lazy_imports` respectively.

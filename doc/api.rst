@@ -5,6 +5,8 @@ LiveImport API
 
 .. autofunction:: liveimport.sync
 
+.. autofunction:: liveimport.poll_lazy_imports
+
 .. autofunction:: liveimport.workspace
 
 .. autofunction:: liveimport.hidden_cell_magic

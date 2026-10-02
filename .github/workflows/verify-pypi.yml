@@ -109,3 +109,15 @@ jobs:
       run: |
         python test/main.py -failstop
       shell: bash
+
+    - name: Checkout Autoload Action
+      uses: actions/checkout@v5
+      with:
+        ref: ${{ github.sha }}
+        path: .autoload-action
+        sparse-checkout: .github/actions/check-autoload
+
+    - name: Check Autoload
+      uses: ./.autoload-action/.github/actions/check-autoload
+      with:
+        repository: ${{ inputs.repository }}

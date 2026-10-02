@@ -54,6 +54,18 @@ jobs:
         coverage combine
         coverage report --include=src/liveimport/*.py --fail-under=100
 
+    - name: Checkout Autoload Action
+      uses: actions/checkout@v5
+      with:
+        ref: ${{ github.sha }}
+        path: .autoload-action
+        sparse-checkout: .github/actions/check-autoload
+
+    - name: Check Autoload
+      uses: ./.autoload-action/.github/actions/check-autoload
+      with:
+        repository: PyPI
+
   full:
     name: Full
     needs: canary
@@ -103,3 +115,15 @@ jobs:
         coverage combine
         coverage report --include=src/liveimport/*.py --fail-under=100
       shell: bash
+
+    - name: Checkout Autoload Action
+      uses: actions/checkout@v5
+      with:
+        ref: ${{ github.sha }}
+        path: .autoload-action
+        sparse-checkout: .github/actions/check-autoload
+
+    - name: Check Autoload
+      uses: ./.autoload-action/.github/actions/check-autoload
+      with:
+        repository: PyPI

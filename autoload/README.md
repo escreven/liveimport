@@ -1,6 +1,6 @@
 # liveimport-autoload
 
-This package consists solely of an IPython startup file that imports
+This package consists solely of an IPython startup file that loads
 [LiveImport](https://github.com/escreven/liveimport) when IPython or Jupyter
 kernels start in the Python environment.  That enables notebooks to use
 `%%liveimport` or `#_%%liveimport` in their very first cell without a bootstrap
@@ -18,7 +18,5 @@ To turn autoloading off, uninstall the package:
 $ pip uninstall liveimport-autoload
 ```
 
-By default, `liveimport-autoload` causes LiveImport to be imported into every
-IPython or Jupyter kernel.  To disable that import for a kernel without
-uninstalling, set `LIVEIMPORT_NO_AUTOLOAD=1` in the kernel's environment before
-it starts.
+To disable autoloading for a kernel without uninstalling, set
+`LIVEIMPORT_NO_AUTOLOAD=1` in the kernel's environment before it starts.
