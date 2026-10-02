@@ -1,5 +1,7 @@
 ## Unreleased
 
+## [1.3.0] - 2026-10-01
+
 #### Added
 - Python 3.15 lazy import support.
 - `poll_lazy_import()` function to begin tracking lazily imported dependencies
