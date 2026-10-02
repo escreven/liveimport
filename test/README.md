@@ -26,6 +26,7 @@ Use option `-h` to see usage.
 | [deleted.py](deleted.py) | Graceful handling of deleted modules
 | [dependencies.py](dependencies.py) | Inter-module dependencies
 | [integration.py](integration.py) | Notebook integration
+| [lazy.py](lazy.py) | Lazy imports
 | [notimported.py](notimported.py) | Detecting unexecuted import statements
 | [obscurities.py](obscurities.py) | Hard to create conditions
 | [order.py](order.py) | Statement order guarantees
@@ -49,16 +50,20 @@ Special cases:
   the `dependencies` module dictionary.  This elides what would otherwise be
   repetitive code.
 
-* The one test function in `integration.py`, `test_notebook()`, runs the cells
-  of [notebook.ipynb](notebook.ipynb) to test notebook integration features.
-  The tests are defined in the notebook's code cells, which contain both normal
-  Python code and special declarations such as `#@ reload mod2` indicating the
-  cell output should include a `mod2` reload notification.
+* When run by Python 3.15 or greater, `integration.py` has two test functions,
+  `test_notebook()` and `test_notebook_lazy()`.  These functions run cells of
+  [notebook.ipynb](notebook.ipynb) and
+  [notebook-lazy.ipynb](notebook-lazy.ipynb) to test notebook integration
+  features.  The tests are defined in the notebook's code cells, which contain
+  both normal Python code and special declarations such as `#@ reload mod2`
+  indicating the cell output should include a `mod2` reload notification.  When
+  run by Python <3.15, only function `test_notebook()` is present.
 
 
 ### Other
 
 | File | Description
 | - | -
-| [notebook.ipynb](notebook.ipynb) | Notebook run by `integration.py` as described above
+| [notebook.ipynb](notebook.ipynb) | Notebook run by `integration.py` with general notebook integration tests
+| [notebook-lazy.ipynb](notebook.ipynb) | Notebook run by `integration.py` with lazy import specific tests
 | [dependencies.gv](dependencies.gv) | Graphviz model of module dependencies used by `dependencies.py`

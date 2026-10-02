@@ -1,24 +1,30 @@
 from __future__ import annotations
+from abc import ABC, abstractmethod
 import math
 import sys
 import ast
 import time
 import textwrap
 from os.path import exists, getmtime
-from importlib import reload
+from importlib import import_module, reload
 from importlib.machinery import ModuleSpec
 from types import ModuleType
 from typing import Any, Callable
-
 from ._workspace import _in_workspace
-from ._importrec import _ImportJournal, _ImportRecord, _ImportIssue
-from ._importrec import _ImportNameRecord, _ImportNameAsRecord
-from ._importrec import _ImportFromNamesRecord, _ImportFromStarRecord
+
+_sys_lazy_modules:set[str] = getattr(sys,"lazy_modules",set())
 
 
 ##############################################################################
 #                                 UTILITY
 ##############################################################################
+
+#
+# Return True iff the named module is lazily imported.
+#
+
+def _is_lazy(modulename:str):
+    return modulename not in sys.modules and modulename in _sys_lazy_modules
 
 #
 # Return an easily readable approximation to elapsed time t.
@@ -116,8 +122,328 @@ def _locate(module:ModuleType) -> tuple[ModuleSpec|None, str|None]:
 ##############################################################################
 
 #
+# We record an import journal for target namespaces as import statements are
+# registered.  Each journal entry is an _ImportRecord instance with a
+# rebind(namespace) method executing the name binding actions of the
+# corresponding import statements with respect to the target namespace.
+#
+
+class _ImportJournal:
+    __slots__ = "sequence"
+
+    def __init__(self):
+        self.sequence:list[_ImportRecord] = []
+
+    #
+    # Apply the journal to a namespace.
+    #
+
+    def apply(self, namespace:dict[str,Any]):
+        for record in self.sequence:
+            record.rebind(namespace)
+
+    #
+    # Extend the journal by adding the given records in order.  Then, remove
+    # superseded records having identical statements.
+    #
+
+    def extend(self, additional:list[_ImportRecord]):
+
+        sequence = self.sequence
+        sequence.extend(additional)
+
+        statement_set = set[str]()
+        result        = list[_ImportRecord]()
+
+        for record in reversed(sequence):
+            statement = record.statement()
+            if statement not in statement_set:
+                result.append(record)
+                statement_set.add(statement)
+
+        result.reverse()
+        self.sequence = result
+
+    #
+    # Return true iff the implied single binding import statement is covered by
+    # an import record in the journal.  Used for testing and debugging only.
+    # See _is_registered() in _debug.py.
+    #
+
+    def covers(self, modulename:str, name:str|None, asname:str|None) -> bool:
+        return any(record.covers(modulename, name, asname)
+                   for record in self.sequence)
+
+    #
+    # Used for testing and debugging.  See _hash_state() in _debug.py.
+    #
+
+    def __hash__(self) -> int:
+        return hash(tuple(record.statement() for record in self.sequence))
+
+#
+# An _ImportIssue describes a problem related to an import record, either
+# related to the underlying import statement not having been executed or some
+# mutation in the environment preventing rebinding.  Import issues never escape
+# the public API.
+#
+
+class _ImportIssue(Exception):
+    __slots__ = "issue"
+
+    def __init__(self, issue:str):
+        self.issue = issue
+
+    def __str__(self):
+        return "IMPORT ISSUE ESCAPED: " + self.issue
+
+#
+# Return the named module, which must be loaded.
+#
+
+def _require_module(modulename:str) -> ModuleType:
+    if (module := sys.modules.get(modulename)) is None:
+        raise _ImportIssue(f"Module {modulename} not loaded")
+    return module
+
+#
+# Return the named module attribute, which must exist.
+#
+
+def _require_attr(module:ModuleType, name:str) -> Any:
+    try:
+        return getattr(module,name)
+    except AttributeError:
+        raise _ImportIssue(f"No name {name} in {module.__name__}")
+
+#
+# Require the named variable to exist in the given namespace.
+#
+
+def _require_name_exists(namespace:dict[str,Any], name:str) -> None:
+    if name not in namespace:
+        raise _ImportIssue(f"No name {name} in namespace")
+
+#
+# Ensure modulename refers to a loaded module with loaded ancestors, returning
+# the module object.  _validate_hierarchy() loads the named module if it's
+# lazily imported.
+#
+# We previously wrapped exceptions during validation module loads in
+# ImportError -- but that's wrong.  In a normal notebook cell, importing a
+# module with, say, a bad top level name use results in a NameError exception,
+# not an ImportError.  We want to match that behavior.
+#
+
+def _validate_hierarchy(modulename:str) -> ModuleType:
+    if _is_lazy(modulename):
+        import_module(modulename)
+    hierarchy = modulename.split('.')
+    parentname = hierarchy[0]
+    parent = _require_module(parentname)
+    for subname in hierarchy[1:]:
+        childname = parentname + '.' + subname
+        child = _require_module(childname)
+        _require_attr(parent,subname)
+        parentname = childname
+        parent = child
+    return parent
+
+#
+# Describe a registered import statement, possibly in part.
+#
+# The correspondence between import records and registered import statements is
+# not one-to-one: referring to Python language grammar elements, each
+# dotted_as_name of an import_name statement is mapped to a unique record,
+# while an import_from statement is always mapped to a single record.
+#
+# There is, however, a one-to-one relationship between import records and a set
+# of equivalent import statements.  See method _ImportRecord.statement().
+#
+
+class _ImportRecord(ABC):
+
+    __slots__ = "modulename"
+
+    def __init__(self, modulename:str):
+        self.modulename = modulename
+
+    #
+    # Determine if the import record may correspond to an executed import
+    # statement.  If not, validate() raises an _ImportIssue exception.  As a
+    # side effect, validate() causes all referenced modules that are only
+    # lazily imported to be loaded.
+    #
+    # validate() does NOT reify namespace names.  So, assuming a.b.x is a
+    # module, validating the record for "lazy from a.b import x" will load
+    # "a.b", load "a.b.x", and leave variable x bound to a proxy.
+    #
+
+    @abstractmethod
+    def validate(self, namespace:dict[str,Any]) -> None:
+        pass # pragma: no cover
+
+    #
+    # Return an import statement equivalent to the import record.
+    #
+
+    @abstractmethod
+    def statement(self) -> str:
+        pass # pragma: no cover
+
+    #
+    # Carry out namespace binding actions of the equivalent import record.
+    #
+
+    @abstractmethod
+    def rebind(self, namespace:dict[str,Any]) -> None:
+        pass # pragma: no cover
+
+    #
+    # Return true iff the import actions implied by modulename, name, and
+    # asname (see _debug._is_registered()) are a subset of the actions of the
+    # record's equivalent import statement.  covers() is only used for
+    # debugging and testing.
+    #
+
+    @abstractmethod
+    def covers(self, modulename:str, name:str|None, asname:str|None) -> bool:
+        pass # pragma: no cover
+
+    def __repr__(self):
+        return ("Record<" + self.statement() + ">")
+
+#
+# import a.b.c
+#
+
+class _ImportNameRecord(_ImportRecord):
+    __slots__ = "topname"
+
+    def __init__(self, modulename:str):
+        super().__init__(modulename)
+        self.topname = modulename.split(".",1)[0]
+
+    def validate(self, namespace:dict[str,Any]) -> None:
+        _validate_hierarchy(self.modulename)
+        _require_name_exists(namespace,self.topname)
+
+    def statement(self) -> str:
+        return f"import {self.modulename}"
+
+    def rebind(self, namespace:dict[str,Any]):
+        topname = self.topname
+        namespace[topname] = _require_module(topname)
+
+    def covers(self, modulename:str, name:str|None, asname:str|None) -> bool:
+        return (name is None and asname is None and
+                modulename == self.modulename)
+
+#
+# import a.b.c as x
+#
+
+class _ImportNameAsRecord(_ImportRecord):
+    __slots__ = "asname"
+
+    def __init__(self, modulename:str, asname:str):
+        super().__init__(modulename)
+        self.asname = asname
+
+    def validate(self, namespace:dict[str,Any]) -> None:
+        _validate_hierarchy(self.modulename)
+        _require_name_exists(namespace,self.asname)
+
+    def statement(self) -> str:
+        return f"import {self.modulename} as {self.asname}"
+
+    def rebind(self, namespace:dict[str,Any]):
+        asname = self.asname
+        namespace[asname] = _require_module(self.modulename)
+
+    def covers(self, modulename:str, name:str|None, asname:str|None) -> bool:
+        return (name is None and asname == self.asname and
+                modulename == self.modulename)
+
+#
+# from a.b.c import name1 as asname1, name2 as asname2, ...
+#
+# The asname elements must not be None -- they should be aliases of the
+# corresponding names if not provided in the from import statement.
+#
+
+class _ImportFromNamesRecord(_ImportRecord):
+    __slots__ = "namepairs"
+
+    def __init__(self, modulename:str, namepairs:list[tuple[str,str]]):
+        super().__init__(modulename)
+        self.namepairs = namepairs
+
+    def validate(self, namespace:dict[str,Any]) -> None:
+        modulename = self.modulename
+        module = _validate_hierarchy(modulename)
+        for name, asname in self.namepairs:
+            #
+            # SOMEDAY: Consider relying on reify behavior of getattr() instead
+            # of checking __dict__ and explicitly importing.
+            #
+            if name not in module.__dict__:
+                submodname = modulename + '.' + name
+                if _is_lazy(submodname):
+                    import_module(submodname)
+            _require_attr(module,name)
+            _require_name_exists(namespace,asname)
+
+    def statement(self) -> str:
+        return (f"from {self.modulename} import " +
+                ", ".join(
+                    name + ('' if asname is None else " as " + asname)
+                    for name, asname in self.namepairs))
+
+    def rebind(self, namespace:dict[str,Any]):
+        module = _require_module(self.modulename)
+        for name, asname in self.namepairs:
+            namespace[asname] = _require_attr(module,name)
+
+    def covers(self, modulename:str, name:str|None, asname:str|None) -> bool:
+        if asname is None: asname = name
+        return (modulename == self.modulename and
+                any(name == pair[0] and asname == pair[1]
+                    for pair in self.namepairs))
+
+#
+# from a.b.c import *
+#
+
+class _ImportFromStarRecord(_ImportRecord):
+    __slots__ = ()
+
+    def __init__(self, modulename:str):
+        super().__init__(modulename)
+
+    def validate(self, namespace:dict[str,Any]) -> None:
+        # Wildcard imports cannot be lazy.
+        _require_module(self.modulename)
+        _validate_hierarchy(self.modulename)
+
+    def statement(self) -> str:
+        return f"from {self.modulename} import *"
+
+    def rebind(self, namespace:dict[str,Any]):
+        module = _require_module(self.modulename)
+        star_names = (module.__all__ if hasattr(module,'__all__') else
+                      (name for name in dir(module)
+                      if not name.startswith('_')))
+        for name in star_names:
+            namespace[name] = _require_attr(module,name)
+
+    def covers(self, modulename:str, name:str|None, asname:str|None) -> bool:
+        return (name == '*' and asname is None and
+                modulename == self.modulename)
+
+#
 # Information LiveImport tracks about namespaces in _NAMESPACE_TABLE keyed by
-# id.  A namespace as an entry in _NAMESPACE_TABLE iff there are registered
+# id.  A namespace has an entry in _NAMESPACE_TABLE iff there are registered
 # imports for it.  Each has a compacted rebind journal equivalent to executing
 # those registered imports in the order they are registered.
 #
@@ -135,10 +461,10 @@ class _NamespaceInfo:
 _NAMESPACE_TABLE:dict[int,_NamespaceInfo] = dict()
 
 #
-# Information LiveImport tracks about a module in _MODULE_TABLE.  We never
-# delete _ModuleInfo objects from _MODULE_TABLE, except in testing.  That means
-# we can maintain what we know about module source file modification times if
-# registrations are cleared.
+# Information LiveImport tracks about a loaded module in _MODULE_TABLE.  We
+# never delete _ModuleInfo objects from _MODULE_TABLE, except in testing.  That
+# means we can maintain what we know about module source file modification
+# times if registrations are cleared.
 #
 # A module is directly imported iff it is attached to a namespace.
 #
@@ -185,9 +511,9 @@ class _ModuleInfo:
     # top level import statements of the given module file. "Possibly" because
     # in the case of "from A import B", we include "A.B".  Often, of course,
     # A.B is not a module -- but that doesn't matter because we only act on an
-    # "A.B" dependency when A.B turns out to be a tracked module.  Returning
+    # "A.B" dependency when A.B turns out to be a tracked module.  Recording
     # possibly instead of definitely referenced module names is an
-    # implementation necessity: it enables the depedency graph to evolve
+    # implementation necessity: it enables the dependency graph to evolve
     # naturally as imports are registered and cleared.
     #
 
@@ -213,6 +539,10 @@ class _ModuleInfo:
         except Exception as ex:
             raise ModuleError(self.module.__name__,"analysis") from ex
 
+        for modulename in result:
+            if _is_lazy(modulename):
+                _REIFY_WATCH.add(modulename)
+
         self.dependencies = list(result)
 
 _MODULE_TABLE:dict[str,_ModuleInfo] = dict()
@@ -226,7 +556,7 @@ _MODULE_TABLE:dict[str,_ModuleInfo] = dict()
 def _track_new_indirects() -> None:
 
     #
-    # We perform a breadth-first traveral of the dependency graph.  The initial
+    # We perform a breadth-first traversal of the dependency graph.  The initial
     # cohort is all currently tracked modules.  Subsequent cohorts are modules
     # tracked because of emergent dependencies in the prior cohort.  Note that
     # added is implicitly a set, since a named module isn't added to
@@ -271,6 +601,12 @@ def _track(module:ModuleType) -> _ModuleInfo:
     return info
 
 #
+# The set of lazily imported modules discovered during dependency analysis.
+#
+
+_REIFY_WATCH:set[str] = set()
+
+#
 # Register an import record, verifying there is evidence that an encompassing
 # import statement was actually executed.  _register_record() tracks modules
 # and adds namespace attachments as needed.
@@ -283,7 +619,8 @@ def _register_record(record:_ImportRecord, namespace:dict[str,Any],
     try:
         record.validate(namespace)
     except _ImportIssue as ex:
-        raise ValueError(ex.issue + "; missing " + record.statement() + "?")
+        raise ValueError(ex.issue + "; missing " +
+                         record.statement() + "?") from None
 
     modules = sys.modules
     module = modules[modulename := record.modulename]
@@ -309,10 +646,11 @@ def register(namespace:dict[str,Any], importstmts:str,
     """
     Register import statements for syncing.
 
-    All modules referenced by the import statements must already be loaded and
-    have associated source files, and all names mentioned must already exist in
-    `namespace`.  If an associated source file is later modified, then a sync
-    will reload the corresponding module and update names from the module.
+    All modules referenced by the import statements must have specs and either
+    be loaded or lazily imported, and all names mentioned must already exist in
+    `namespace`.  If a referenced module is lazily imported, :func:`register`
+    loads it.  If an associated source file is later modified, then a sync will
+    reload the corresponding module and update names from the module.
 
     :param namespace: The import statement target, usually the caller's value
         of ``globals()``.
@@ -340,9 +678,9 @@ def register(namespace:dict[str,Any], importstmts:str,
     :raises ImportError: `importstmts` includes an improper relative import.
 
     :raises ValueError: `importstmts` includes a non-import statement and
-        `allow_other_statements` is false, a referenced module is not loaded or
-        has no associated source file, or an included name does not already
-        exist.
+        `allow_other_statements` is false, a referenced module has no spec or
+        is not loaded and not lazily imported, or an included name does not
+        already exist.
 
     :raises ModuleError: The content of a module referenced by an import
         statement is erroneous.
@@ -364,7 +702,7 @@ def register(namespace:dict[str,Any], importstmts:str,
     with the value of ``stop`` in ``simulator``.
 
     Using multiline strings to specify multiple import statements, each on its
-    own line as shown above is convenient and easy to read, but statements must
+    own line as shown above, is convenient and easy to read, but statements must
     have identical indentation.
 
       .. code:: python
@@ -514,7 +852,7 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
     :param observer: If given, :func:`sync()` calls `observer` with a
       :class:`ReloadEvent` describing each successful reload.
 
-    :raises ModuleError: The content of a tracked module is erronous or raised
+    :raises ModuleError: The content of a tracked module is erroneous or raised
         an exception when executed during a reload.
 
     .. note::
@@ -555,7 +893,7 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
     # topologically by module dependency, including reloads of modules that
     # haven't changed but depend on modules that will reload.
     #
-    # Mark intepretation:
+    # Mark interpretation:
     #
     #   0 - Unvisited
     #   1 - On current depth first traversal path
@@ -627,7 +965,7 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
         try:
             nsinfo.journal.apply(nsinfo.namespace)
         except _ImportIssue as ex:
-            raise RuntimeError(ex.issue)
+            raise RuntimeError(ex.issue) from None
 
     if reload_error is not None:
         raise ModuleError(info.module.__name__,"reload") from reload_error
@@ -638,6 +976,33 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
     #
 
     _track_new_indirects()
+
+
+def poll_lazy_imports():
+    """
+    Begin tracking modules of lazy imports that have now resolved.
+
+    During dependency analysis, LiveImport may discover that a tracked module
+    depends on a module which is not loaded but is lazily imported.  LiveImport
+    defers tracking such modules until the first :func:`poll_lazy_imports()`
+    call after the application loads the lazily imported module, usually
+    through reification.  If :func:`poll_lazy_imports()` discovers a lazily
+    imported dependency has loaded, it begins tracking that module if the
+    module is in the workspace.
+
+    :raises ModuleError: The content of a newly tracked module is erroneous.
+
+    .. note::
+        Calling :func:`poll_lazy_imports()` in a notebook should not be
+        necessary.  LiveImport automatically polls lazy imports after each cell
+        execution.
+    """
+    modules = sys.modules
+    reified = [ x for x in _REIFY_WATCH if x in modules ]
+    if reified:
+        for modulename in reified:
+            _REIFY_WATCH.remove(modulename)
+        _track_new_indirects()
 
 
 class ReloadEvent:

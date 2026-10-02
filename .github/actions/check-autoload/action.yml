@@ -1,0 +1,87 @@
+name: check-autoload
+description: Check autoload extra installation and removal
+
+inputs:
+  repository:
+    description: Package repository to check (PyPI or TestPyPI).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Check autoload
+      shell: bash
+      env:
+        AUTOLOAD_REPOSITORY: ${{ inputs.repository }}
+      run: |
+        python - <<'PY'
+        import os
+        from pathlib import Path
+        import subprocess
+        import sys
+        import tempfile
+
+        indexes = {
+            'PyPI': 'https://pypi.org/simple/',
+            'TestPyPI': 'https://test.pypi.org/simple/',
+        }
+        repository = os.environ['AUTOLOAD_REPOSITORY']
+        if repository not in indexes:
+            sys.exit('repository must be PyPI or TestPyPI')
+
+        # Run normal IPython startup, then submit exact cells. Propagate cell
+        # errors because IPython normally catches them instead of exiting.
+        probe = '''
+        import sys
+        from IPython.terminal.ipapp import TerminalIPythonApp
+
+        app = TerminalIPythonApp.instance()
+        app.initialize([])
+        for cell in sys.argv[1:]:
+            result = app.shell.run_cell(cell, store_history=True)
+            if not result.success:
+                sys.exit(1)
+        print('AUTOLOAD-PROBE-PASSED', flush=True)
+        '''
+        # The embedded program must have no leading indentation.
+        import textwrap
+        probe = textwrap.dedent(probe)
+
+        absent = "import sys; assert 'liveimport' not in sys.modules, 'LiveImport was loaded'"
+        active = [
+            '#_%%liveimport\nimport sys\n',
+            "import liveimport; assert liveimport._is_registered(globals(),'sys'), 'sys was not registered'",
+        ]
+
+        with tempfile.TemporaryDirectory(prefix='check-autoload-') as directory:
+            env = os.environ.copy()
+            for name in ('PYTHONPATH', 'PYTHONHOME', 'LIVEIMPORT_NO_AUTOLOAD'):
+                env.pop(name, None)
+            env['IPYTHONDIR'] = str(Path(directory) / 'ipython')
+            env['PYTHONNOUSERSITE'] = '1'
+
+            def pip(*args):
+                subprocess.run(
+                    [sys.executable, '-m', 'pip', '--isolated', *args],
+                    cwd=directory, env=env, check=True,
+                )
+
+            def check(stage, cells):
+                print(stage, flush=True)
+                result = subprocess.run(
+                    [sys.executable, '-c', probe, *cells],
+                    cwd=directory, env=env, text=True,
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                )
+                print(result.stdout, end='', flush=True)
+                result.check_returncode()
+                if 'AUTOLOAD-PROBE-PASSED' not in result.stdout.splitlines():
+                    sys.exit('IPython did not complete the probe')
+
+            pip('install', '--index-url', indexes['PyPI'], 'ipython')
+            check('Before installation', [absent])
+            pip('install', '--upgrade', '--index-url', indexes[repository], 'liveimport[autoload]')
+            check('After installation', active)
+            pip('uninstall', '-y', 'liveimport-autoload')
+            check('After uninstalling liveimport-autoload', [absent])
+        PY

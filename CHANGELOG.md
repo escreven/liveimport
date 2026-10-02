@@ -1,5 +1,18 @@
 ## Unreleased
 
+#### Added
+- Python 3.15 lazy import support.
+- `poll_lazy_import()` function to begin tracking lazily imported dependencies
+  once they load.  (Not needed in notebooks.)
+- `autoload` extra tests in integration, deployment, and dependency test
+  workflows.
+- `op.sh` and `op-autoload.sh` now accept a python interpreter specification
+  option (`--python=PYTHON`).
+
+#### Fixed
+- Internal `_ImportIssue` exceptions are no longer part of publicly visible
+  exception chains.
+
 ## [1.2.7] - 2026-09-29
 
 #### Added
@@ -25,7 +38,7 @@
   useful for testing since reloading LiveImport requires reloading the
   implementation modules as well as the public module, all in the correct
   order.)
-- Extraneous op.sh command line arguments are disallowed.
+- Extraneous `op.sh` command line arguments are disallowed.
 - The decision to track module "a.b.c.x" when "from a.b.c import x" is
   registered is now based on whether or not attribute "x" of module "a.b.c" is
   the loaded module "a.b.c.x".  Previously, it was determined by whether or not

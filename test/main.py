@@ -21,6 +21,7 @@ import relative
 import workspace
 import bootstrap
 import integration
+import lazy
 
 
 _Case = tuple[str,FunctionType]
@@ -126,6 +127,7 @@ def main():
     cases.extend(_get_cases(workspace))
     cases.extend(_get_cases(bootstrap))
     cases.extend(_get_cases(integration))
+    cases.extend(_get_cases(lazy))
 
     if (pattern := args.pattern) is not None:
         cases = [ case for case in cases

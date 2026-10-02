@@ -229,9 +229,11 @@ upload_dist() {
 #
 
 usage() {
-    echo "Usage: $0 ACTION"
+    echo "Usage: $0 [ --python=PYTHON ] ACTION"
     echo
-    echo "Where ACTION is one of"
+    echo "Where PYTHON is a Python interpreter command or path"
+    echo
+    echo "and ACTION is one of"
     echo
     echo "    build-dist          Build wheel and sdist files in dist/"
     echo "    check-dist          Verify the distribution files"
@@ -260,6 +262,14 @@ cd "$(dirname "$BASH_SOURCE")"
 
 grep -qE 'name\s*=\s*"liveimport-autoload"' pyproject.toml \
     || fail "Project name is not liveimport-autoload."
+
+if [[ $# > 0 && $1 =~ --python=(.*) ]]; then
+    PYTHON="${BASH_REMATCH[1]}"
+    shift
+    echo
+    echo "Will use $($PYTHON --version)"
+    echo
+fi
 
 #
 # Dispatch

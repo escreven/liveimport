@@ -12,7 +12,7 @@ import io
 from types import ModuleType
 import liveimport
 from liveimport._nbi import _LiveImportMagics
-from liveimport._importrec import _ImportIssue
+from liveimport._core import _ImportIssue
 from setup import *
 from setup_imports import *
 

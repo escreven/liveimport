@@ -1,6 +1,6 @@
 import sys
 from typing import Any, TextIO
-from ._core import _MODULE_TABLE, _NAMESPACE_TABLE
+from ._core import _MODULE_TABLE, _NAMESPACE_TABLE, _REIFY_WATCH
 
 ##############################################################################
 #                              TEST AND DEBUG
@@ -20,6 +20,9 @@ def _dump(file:TextIO|None=None):
         print(f"Namespace {id}",file=file)
         for record in info.journal.sequence:
             print(f"    {record}",file=file)
+    print("Reify watching " +
+          ("no modules" if not _REIFY_WATCH else
+           ", ".join(name for name in sorted(_REIFY_WATCH))))
 
 #
 # Check registration.  The arguments describe an import statement.
@@ -28,21 +31,12 @@ def _dump(file:TextIO|None=None):
 # (modulename, None, asname) --> import <modulename> as <asname>
 # (modulename, name, None)   --> from <modulename> import <name>
 # (modulename, name, asname) --> from <modulename> import <name> as <asname>
-# (modulemame, '*',  None)   --> from <modulename> import '*'
+# (modulename, '*',  None)   --> from <modulename> import *
 #
 # _is_registered() returns true iff there is an import journal for the given
 # namespace covering that statement.  Furthermore, if the statement is so
 # covered, _is_registered() raises an AssertionError if
 # _is_tracked(modulename,namespace) would return False.
-#
-#  TODO: THE BELOW IS NO LONGER TRUE.  VERIFY IT ISN'T REQUIRED FOR
-# TESTING, AND REMOVE IF SO.
-#
-# Journal coalescing means the rebinds of some registrations can hide others.
-# Example:
-#
-#       from mod1 import <name> as x
-#       from mod2 import <name> as x
 #
 # _is_registered() returns True for the second import and False for the first.
 # Not a problem unless imports conflict as above.
@@ -82,10 +76,12 @@ def _is_tracked(modulename:str, and_attached_to:dict[str,Any]|None=None):
 
 def _hash_state() -> int:
     hashcode = 0
-    for nsid, nsinfo in _NAMESPACE_TABLE.items():
+    for nsinfo in _NAMESPACE_TABLE.values():
         hashcode = hash((hashcode,nsinfo.journal))
     for modulename, info in _MODULE_TABLE.items():
-        hashcode = hash((hashcode,modulename,tuple(sorted(info.attachedto))))
+        hashcode = hash((hashcode,modulename,tuple(sorted(info.attachedto)),
+                         tuple(info.dependencies)))
+    hashcode = hash((hashcode,tuple(sorted(_REIFY_WATCH))))
     return hashcode
 
 #
@@ -135,7 +131,6 @@ def _verify():
 def _reload_liveimport():
     from importlib import reload
     reload(sys.modules['liveimport._workspace'])
-    reload(sys.modules['liveimport._importrec'])
     reload(sys.modules['liveimport._core'])
     reload(sys.modules['liveimport._nbi'])
     reload(sys.modules['liveimport._debug'])

@@ -2,6 +2,7 @@
 [![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/escreven/liveimport/blob/main/.github/workflows/test.yml)
 [![Read the Docs Status](https://readthedocs.org/projects/liveimport/badge/?version=latest)](https://liveimport.readthedocs.io)
 [![View on GitHub](https://img.shields.io/badge/Source-GitHub-blue?logo=github)](https://github.com/escreven/liveimport)
+![Python Version](https://img.shields.io/pypi/pyversions/liveimport)
 
 ## Overview
 
@@ -79,7 +80,7 @@ LiveImport requires Python 3.10 or greater and IPython 7.23.1 or greater.
 ## Reliability
 
 LiveImport includes automated tests with 100% code coverage, which are run on
-MacOS, Linux, and Windows with Python versions 3.10 through 3.14 using both the
+MacOS, Linux, and Windows with Python versions 3.10 through 3.15 using both the
 oldest supported and latest versions of IPython.  Notebook integration features
 are tested using notebook 5.7.0 and notebook latest.  See [the GitHub
 workflow](https://github.com/escreven/liveimport/blob/main/.github/workflows/test.yml)

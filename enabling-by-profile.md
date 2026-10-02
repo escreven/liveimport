@@ -1,9 +1,9 @@
 ## Enabling by Profile
 
 LiveImport is enabled in a notebook session when it's first imported.  That
-means by default the first cell of a notebook cannot usefully be a
-`%%liveimport` or `#_%%liveimport` cell.  However, you can change that by
-using IPython profiles to enable LiveImport at startup.
+means by default the first cell of a notebook cannot be a `%%liveimport` or
+`#_%%liveimport` cell.  You can change that by using IPython profiles to import
+LiveImport at startup.
 
 First, use the `ipython` command to [create a profile](https://ipython.readthedocs.io/en/stable/config/intro.html)
 if you don't have one.  You can create a default profile with
