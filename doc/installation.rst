@@ -9,6 +9,16 @@ You can install LiveImport from PyPI with
 
     $ pip install liveimport
 
+or
+
+.. code:: console
+
+    $ pip install "liveimport[autoload]"
+
+See :ref:`Enabling by Default <enabling_by_default>` for information about the
+``autoload`` extra.
+
+
 You can also clone the repo and install it directly.
 
 .. code:: console

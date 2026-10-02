@@ -4,7 +4,7 @@ See `the user guide
 <https://liveimport.readthedocs.io/en/latest/userguide.html>`_.
 """
 
-__version__ = "1.3.0dev1"
+__version__ = "1.3.0"
 
 __all__ = ("register", "sync", "auto_sync", "hidden_cell_magic",
            "ReloadEvent", "ModuleError", "workspace")
