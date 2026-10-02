@@ -1,5 +1,8 @@
 ## Unreleased
 
+#### Changed
+- Folded _workspace.py into _core.py.
+
 ## [1.3.0] - 2026-10-01
 
 #### Added

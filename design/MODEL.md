@@ -17,17 +17,17 @@ module relationships.](model-diagram.svg)
 | Solid arrow | Direct object reference |
 | Dashed arrow | Lookup through IDs or names, rather than direct reference |
 | Filled diamond tail | Referring object owns referenced object |
-| `1` on arrow label | A single reference |
+| `1` on arrow label | Exactly one reference |
 | `0..*` on arrow label | Zero or more references |
 | `*..*` on arrow label | Many to many relationship |
 
 ### Notes
 
 `_ModuleInfo.attachedto` stores namespace dictionary IDs, not `_NamespaceInfo`
-objects. Those IDs resolve through `_NAMESPACE_TABLE`.
+object references. Those IDs resolve through `_NAMESPACE_TABLE`.
 
 `_ModuleInfo.dependencies` stores candidate module names, not `_ModuleInfo`
-objects.
+object references.
 
 * A dependency becomes tracked (the named module has a `_MODULE_TABLE`
 entry) only if and when the module is loaded and has a source file in the
@@ -40,5 +40,5 @@ import B` in tracked module `M` adds `A.B` to `M`'s dependency list because
 `_ImportRecord.modulename` identifies a Python module via `sys.modules`.
 
 `_NamespaceInfo.namespace` is the target for rebind actions when the associated
-import journal is applied.  When using a notebook, this is the notebook's
-`globals()`.  When using the API directly, it can be any dictionary.
+import journal is applied.  When using LiveImport in a notebook, this is the
+notebook's `globals()`.  When using the API directly, it can be any dictionary.

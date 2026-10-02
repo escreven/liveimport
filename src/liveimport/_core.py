@@ -1,16 +1,18 @@
 from __future__ import annotations
-from abc import ABC, abstractmethod
-import math
+import os
 import sys
 import ast
 import time
 import textwrap
+import math
+from abc import ABC, abstractmethod
+from os import PathLike
+from pathlib import Path
 from os.path import exists, getmtime
 from importlib import import_module, reload
 from importlib.machinery import ModuleSpec
 from types import ModuleType
 from typing import Any, Callable
-from ._workspace import _in_workspace
 
 _sys_lazy_modules:set[str] = getattr(sys,"lazy_modules",set())
 
@@ -25,6 +27,14 @@ _sys_lazy_modules:set[str] = getattr(sys,"lazy_modules",set())
 
 def _is_lazy(modulename:str):
     return modulename not in sys.modules and modulename in _sys_lazy_modules
+
+#
+# Path.absolute() doesn't collapse /../ components (but does collapse /./
+# components -- strange.)
+#
+
+def _absolute(path:str|PathLike) -> Path:
+    return Path(os.path.abspath(path))
 
 #
 # Return an easily readable approximation to elapsed time t.
@@ -120,6 +130,31 @@ def _locate(module:ModuleType) -> tuple[ModuleSpec|None, str|None]:
 ##############################################################################
 #                                 MODEL
 ##############################################################################
+
+#
+# The set of lazily imported modules discovered during dependency analysis.
+#
+
+_REIFY_WATCH:set[str] = set()
+
+#
+# The workspace is a possibly empty list of directory paths.  We use Path
+# objects so we can use is_relative_to(), and we normalize using _absolute()
+# instead of resolve() because we don't want to follow symbolic links -- most
+# likely what a user expects.
+#
+
+_WORKSPACE:list[Path] = [ _absolute(".") ]
+
+def _in_workspace(file:str) -> bool:
+
+    filepath = _absolute(file)
+
+    for dirpath in _WORKSPACE:
+        if filepath.is_relative_to(dirpath):
+            return True
+
+    return False
 
 #
 # We record an import journal for target namespaces as import statements are
@@ -601,12 +636,6 @@ def _track(module:ModuleType) -> _ModuleInfo:
     return info
 
 #
-# The set of lazily imported modules discovered during dependency analysis.
-#
-
-_REIFY_WATCH:set[str] = set()
-
-#
 # Register an import record, verifying there is evidence that an encompassing
 # import statement was actually executed.  _register_record() tracks modules
 # and adds namespace attachments as needed.
@@ -1003,6 +1032,70 @@ def poll_lazy_imports():
         for modulename in reified:
             _REIFY_WATCH.remove(modulename)
         _track_new_indirects()
+
+
+def workspace(*directories:str|PathLike) -> None:
+    """
+    Define the workspace, a set of directories.
+
+    LiveImport tracks modules that either are imported by a registered import
+    statement, or are imported by a tracked module and have a source file in
+    the workspace.  A source file is in the workspace if and only if it's under
+    a workspace directory.
+
+    The default workspace is the current working directory when the LiveImport
+    module is imported.  Thus in normal use, when LiveImport is used in a
+    notebook, the workspace is the directory containing the notebook.
+
+    :param directories: Zero or more path strings or path-like objects.  Each
+        path must identify an existing directory.
+
+    :raises ValueError: One of the specified paths does not exist or
+        exists but is not a directory.
+
+    Example: After calling
+
+      .. code:: python
+
+        liveimport.workspace("src", "/opt/notebook-utils")
+
+    the workspace is the directory ``src`` in the current working directory and
+    the directory ``/opt/notebook-utils``.
+
+    If you call
+
+      .. code:: python
+
+        liveimport.workspace()  # No paths given
+
+    the workspace is empty, so only modules referenced by registered imports
+    will be tracked.
+
+    .. note::
+        Changing the workspace does not alter tracking decisions LiveImport has
+        already made.  It only affects future decisions.  If you want a
+        non-default workspace, it's best to change it before registering any
+        imports.
+    """
+    global _WORKSPACE
+
+    workspace:list[Path] = []
+
+    for dir in directories:
+
+        path = _absolute(dir)
+
+        if not path.exists():
+            raise ValueError(f"Path {path} does not exist")
+
+        if not path.is_dir():
+            raise ValueError(f"Path {path} is not a directory")
+
+        workspace.append(path)
+
+    _WORKSPACE[:] = workspace
+
+    _track_new_indirects()
 
 
 class ReloadEvent:

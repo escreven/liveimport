@@ -130,7 +130,6 @@ def _verify():
 
 def _reload_liveimport():
     from importlib import reload
-    reload(sys.modules['liveimport._workspace'])
     reload(sys.modules['liveimport._core'])
     reload(sys.modules['liveimport._nbi'])
     reload(sys.modules['liveimport._debug'])
