@@ -20,7 +20,7 @@ digraph LiveImportState {
     <TR><TD ALIGN="LEFT">modulename: str</TD></TR>
     <TR><TD BGCOLOR="#f1f5f9" ALIGN="LEFT"><B>Concrete types · additional instance fields</B></TD></TR>
     <TR><TD ALIGN="LEFT">_ImportNameRecord<BR ALIGN="LEFT"/>    topname: str<BR ALIGN="LEFT"/><BR ALIGN="LEFT"/>_ImportNameAsRecord<BR ALIGN="LEFT"/>    asname: str<BR ALIGN="LEFT"/><BR ALIGN="LEFT"/>_ImportFromNamesRecord<BR ALIGN="LEFT"/>    namepairs: list[tuple[str, str]]<BR ALIGN="LEFT"/><BR ALIGN="LEFT"/>_ImportFromStarRecord<BR ALIGN="LEFT"/>    no additional fields<BR ALIGN="LEFT"/></TD></TR>
-    <TR><TD BGCOLOR="#f8fafc" ALIGN="LEFT">All four inherit modulename.<BR ALIGN="LEFT"/>namepairs contains (name, bound name) pairs.</TD></TR>
+    <TR><TD BGCOLOR="#f8fafc" ALIGN="LEFT">All four inherit modulename.<BR ALIGN="LEFT"/>namepairs contains (name, asname) pairs.</TD></TR>
   </TABLE>>];
   pyModule [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#94a3b8"><TR><TD BGCOLOR="#f1f5f9"><B>Python module object</B></TD></TR><TR><TD>ModuleType</TD></TR></TABLE>>];
   namespace [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="9" COLOR="#94a3b8"><TR><TD BGCOLOR="#f1f5f9"><B>Target namespace</B></TD></TR><TR><TD>dict[str, Any]</TD></TR></TABLE>>];

@@ -68,7 +68,7 @@
 <!-- record&#45;&gt;pyModule -->
 <g id="edge7" class="edge">
 <title>record&#45;&gt;pyModule</title>
-<path fill="none" stroke="#41566e" stroke-dasharray="5,2" d="M494.31,-199.53C412.76,-241.78 312.2,-293.88 247.07,-327.62"/>
+<path fill="none" stroke="#41566e" stroke-dasharray="5,2" d="M499.91,-196.62C417.49,-239.33 313.89,-293 247.25,-327.53"/>
 <polygon fill="#41566e" stroke="#41566e" points="246.07,-324.99 240.25,-331.15 248.65,-329.96 246.07,-324.99"/>
 <text xml:space="preserve" text-anchor="middle" x="379.36" y="-296.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#334155">modulename · 1 name</text>
 <text xml:space="preserve" text-anchor="middle" x="379.36" y="-284.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#334155">via sys.modules[name]</text>
@@ -108,24 +108,24 @@
 <!-- record -->
 <g id="node4" class="node">
 <title>record</title>
-<polygon fill="#e5edf7" stroke="none" points="494.88,-226 494.88,-256.75 762.62,-256.75 762.62,-226 494.88,-226"/>
+<polygon fill="#e5edf7" stroke="none" points="500.5,-226 500.5,-256.75 757,-256.75 757,-226 500.5,-226"/>
 <text xml:space="preserve" text-anchor="start" x="560.5" y="-237.35" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00">_ImportRecord</text>
 <text xml:space="preserve" text-anchor="start" x="646" y="-237.35" font-family="Helvetica,sans-Serif" font-size="12.00"> · abstract</text>
-<text xml:space="preserve" text-anchor="start" x="503.88" y="-207.25" font-family="Helvetica,sans-Serif" font-size="12.00">modulename: str</text>
-<polygon fill="#f1f5f9" stroke="none" points="494.88,-164.5 494.88,-195.25 762.62,-195.25 762.62,-164.5 494.88,-164.5"/>
-<text xml:space="preserve" text-anchor="start" x="503.88" y="-175.85" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00">Concrete types · additional instance fields</text>
-<text xml:space="preserve" text-anchor="start" x="503.88" y="-145.75" font-family="Helvetica,sans-Serif" font-size="12.00">_ImportNameRecord</text>
-<text xml:space="preserve" text-anchor="start" x="503.88" y="-133" font-family="Helvetica,sans-Serif" font-size="12.00"> &#160;&#160;&#160;topname: str</text>
-<text xml:space="preserve" text-anchor="start" x="503.88" y="-120.25" font-family="Helvetica,sans-Serif" font-size="12.00">_ImportNameAsRecord</text>
-<text xml:space="preserve" text-anchor="start" x="503.88" y="-107.5" font-family="Helvetica,sans-Serif" font-size="12.00"> &#160;&#160;&#160;asname: str</text>
-<text xml:space="preserve" text-anchor="start" x="503.88" y="-94.75" font-family="Helvetica,sans-Serif" font-size="12.00">_ImportFromNamesRecord</text>
-<text xml:space="preserve" text-anchor="start" x="503.88" y="-82" font-family="Helvetica,sans-Serif" font-size="12.00"> &#160;&#160;&#160;namepairs: list[tuple[str, str]]</text>
-<text xml:space="preserve" text-anchor="start" x="503.88" y="-69.25" font-family="Helvetica,sans-Serif" font-size="12.00">_ImportFromStarRecord</text>
-<text xml:space="preserve" text-anchor="start" x="503.88" y="-56.5" font-family="Helvetica,sans-Serif" font-size="12.00"> &#160;&#160;&#160;no additional fields</text>
-<polygon fill="#f8fafc" stroke="none" points="494.88,-1 494.88,-44.5 762.62,-44.5 762.62,-1 494.88,-1"/>
-<text xml:space="preserve" text-anchor="start" x="503.88" y="-25.75" font-family="Helvetica,sans-Serif" font-size="12.00">All four inherit modulename.</text>
-<text xml:space="preserve" text-anchor="start" x="503.88" y="-13" font-family="Helvetica,sans-Serif" font-size="12.00">namepairs contains (name, bound name) pairs.</text>
-<polygon fill="none" stroke="#506985" points="493.88,0 493.88,-257.75 763.62,-257.75 763.62,0 493.88,0"/>
+<text xml:space="preserve" text-anchor="start" x="509.5" y="-207.25" font-family="Helvetica,sans-Serif" font-size="12.00">modulename: str</text>
+<polygon fill="#f1f5f9" stroke="none" points="500.5,-164.5 500.5,-195.25 757,-195.25 757,-164.5 500.5,-164.5"/>
+<text xml:space="preserve" text-anchor="start" x="509.5" y="-175.85" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="12.00">Concrete types · additional instance fields</text>
+<text xml:space="preserve" text-anchor="start" x="509.5" y="-145.75" font-family="Helvetica,sans-Serif" font-size="12.00">_ImportNameRecord</text>
+<text xml:space="preserve" text-anchor="start" x="509.5" y="-133" font-family="Helvetica,sans-Serif" font-size="12.00"> &#160;&#160;&#160;topname: str</text>
+<text xml:space="preserve" text-anchor="start" x="509.5" y="-120.25" font-family="Helvetica,sans-Serif" font-size="12.00">_ImportNameAsRecord</text>
+<text xml:space="preserve" text-anchor="start" x="509.5" y="-107.5" font-family="Helvetica,sans-Serif" font-size="12.00"> &#160;&#160;&#160;asname: str</text>
+<text xml:space="preserve" text-anchor="start" x="509.5" y="-94.75" font-family="Helvetica,sans-Serif" font-size="12.00">_ImportFromNamesRecord</text>
+<text xml:space="preserve" text-anchor="start" x="509.5" y="-82" font-family="Helvetica,sans-Serif" font-size="12.00"> &#160;&#160;&#160;namepairs: list[tuple[str, str]]</text>
+<text xml:space="preserve" text-anchor="start" x="509.5" y="-69.25" font-family="Helvetica,sans-Serif" font-size="12.00">_ImportFromStarRecord</text>
+<text xml:space="preserve" text-anchor="start" x="509.5" y="-56.5" font-family="Helvetica,sans-Serif" font-size="12.00"> &#160;&#160;&#160;no additional fields</text>
+<polygon fill="#f8fafc" stroke="none" points="500.5,-1 500.5,-44.5 757,-44.5 757,-1 500.5,-1"/>
+<text xml:space="preserve" text-anchor="start" x="509.5" y="-25.75" font-family="Helvetica,sans-Serif" font-size="12.00">All four inherit modulename.</text>
+<text xml:space="preserve" text-anchor="start" x="509.5" y="-13" font-family="Helvetica,sans-Serif" font-size="12.00">namepairs contains (name, asname) pairs.</text>
+<polygon fill="none" stroke="#506985" points="499.5,0 499.5,-257.75 758,-257.75 758,0 499.5,0"/>
 </g>
 <!-- pyModule -->
 <g id="node5" class="node">

@@ -1,4 +1,4 @@
-## LiveImport State
+## LiveImport Data Model
 
 ### Roots
 
@@ -6,9 +6,9 @@
 * `_MODULE_TABLE: dict[str, _ModuleInfo]` &mdash; by module name
 * `_REIFY_WATCH: set[str]` &mdash; module names
 
-### Relationships
+### Types
 ![LiveImport state fields, object containment, and indirect namespace and
-module relationships.](state-model.svg)
+module relationships.](model-diagram.svg)
 
 ### Key
 
@@ -35,11 +35,10 @@ workspace.  Some modules listed in `dependencies` might not even exist: `from A
 import B` in tracked module `M` adds `A.B` to `M`'s dependency list because
 `A.B` might exist in the future even if it doesn't exist now.
 
-* A dependency on a lazily imported module has an entry in `_REIFY_WATCH`,
-  represented by the `Watched module name` above.
+* A dependency on a lazily imported module has an entry in `_REIFY_WATCH`
 
 `_ImportRecord.modulename` identifies a Python module via `sys.modules`.
 
 `_NamespaceInfo.namespace` is the target for rebind actions when the associated
 import journal is applied.  When using a notebook, this is the notebook's
-`globals()`.  When using the API directly, this can be any dictionary.
+`globals()`.  When using the API directly, it can be any dictionary.
