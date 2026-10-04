@@ -90,6 +90,9 @@ def main():
     parser.add_argument("pattern", nargs='?', default=None,
         help="Only run tests with names containing this regex")
 
+    parser.add_argument("-exclude", metavar="PATTERN",
+        help="Exclude tests with names containing this regex")
+
     parser.add_argument("-keeptemp", action="store_true",
         help="Keep the temporary directory created for testing")
 
@@ -132,6 +135,10 @@ def main():
     if (pattern := args.pattern) is not None:
         cases = [ case for case in cases
                   if re.search(pattern,case[0]) ]
+
+    if (exclude := args.exclude) is not None:
+        cases = [ case for case in cases
+                  if not re.search(exclude,case[0]) ]
 
     if args.reverse:
         cases = list(reversed(cases))
