@@ -600,6 +600,8 @@ def _track_new_indirects() -> None:
 
     cohort:list[_ModuleInfo] = list(_MODULE_TABLE.values())
 
+    error:Exception|None = None
+
     while True:
         added:list[_ModuleInfo] = []
         for info in cohort:
@@ -617,12 +619,18 @@ def _track_new_indirects() -> None:
                 #
                 # Start tracking the dependee.
                 #
-                newinfo = _ModuleInfo(module)
                 assert modulename == module.__name__
-                _MODULE_TABLE[modulename] = newinfo
-                added.append(newinfo)
+                try:
+                    newinfo = _ModuleInfo(module)
+                    _MODULE_TABLE[modulename] = newinfo
+                    added.append(newinfo)
+                except Exception as ex:
+                    if error is None: error = ex
         if not added: break
         cohort = added
+
+    if error is not None:
+        raise error
 
 #
 # Ensure module is tracked.

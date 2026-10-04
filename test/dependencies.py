@@ -7,6 +7,7 @@ import time
 import liveimport
 from setup import *
 from setup_imports import *
+from liveimport import ModuleError
 
 #
 # The tests depend on the following dependency graph created in setup.
@@ -126,3 +127,24 @@ def test_remove_dependency():
         reload_clear()
         liveimport.sync(observer=reload_observe)
         reload_expect("A","E","C","B") #type:ignore
+
+
+def test_analysis_error():
+    """
+    If there is an exception while scanning a module for dependencies, the
+    exception should be deferred until dependency analysis completes.
+    """
+    #
+    # This test is someonwhat fragile because it depends on the import order in
+    # B and the fact that LiveImport scans dependencies in import order.
+    #
+    error = None
+    with revised_module("D", postscript="fail when scanned"):
+        try:
+            liveimport.register(globals(),"import B")
+        except ModuleError as ex:
+            error = ex
+    assert error is not None
+    assert is_tracked("C")
+    assert is_tracked("G")
+    assert not is_tracked("D")

@@ -259,8 +259,7 @@ followed by
 
 The ``graphtypes`` and ``biconnected`` imports will be lazy, and if those
 modules are not already loaded through some other path, LiveImport loads them
-during registration.  Subsequent imports of module ``gvdot`` will also be lazy
-and are unaffected by LiveImport.  The ``sp`` import is not lazy.
+during registration.  The ``sp`` import is not lazy.
 
 Suppose the implementation of ``biconnected`` includes this import:
 

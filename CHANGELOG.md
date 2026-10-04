@@ -2,6 +2,11 @@
 
 #### Changed
 - Folded _workspace.py into _core.py.
+- Added `-exclude` option to `test/main.py`.
+
+#### Fixed
+- An exception raised while scanning a module for dependencies no longer
+  terminates the dependency analysis process.
 
 ## [1.3.0] - 2026-10-01
 
