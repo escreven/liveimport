@@ -473,7 +473,9 @@ def expect_tag(modulename:str, tag):
 #
 # Verify sync() reload events.  While tags verify that modules are actually
 # reloaded, reload_*() can be used to test the observer option of sync() as
-# well as check reload order.
+# well as check reload order.  Parameter depends_on is a strict partial order
+# defined by the given ordered pairs; reloads must be consistent with the
+# converse of this order.
 #
 
 reload_list:list[ReloadEvent] = []
@@ -484,9 +486,9 @@ def reload_clear():
 def reload_observe(event:ReloadEvent):
     reload_list.append(event)
 
-def reload_expect(*expected:str):
-    reports = [ event.module for event in reload_list ]
-    if (set(reports) != set(expected)):
+def reload_expect(*expected:str, depends_on:list[tuple[str,str]]|None=None):
+
+    def bad_reloads(detail:str):
         print("UNEXPECTED RELOAD REPORT(S)")
         print()
         print("Expected")
@@ -497,7 +499,26 @@ def reload_expect(*expected:str):
         for report in reload_list:
             print(f"    {report}")
         print()
+        print(detail)
+        print()
         raise RuntimeError("Unexpected reload report(s)s")
+
+    reports = [ event.module for event in reload_list ]
+    report_set = set(reports)
+
+    if len(report_set) != len(reports):
+        bad_reloads("Reports not unique")
+
+    if report_set != set(expected):
+        bad_reloads("Missing or extra report")
+
+    if depends_on is not None:
+        index = { report: seqno for report, seqno
+                  in zip(reports,range(len(reports))) }
+        for lhs, rhs in depends_on:
+            if lhs in index and rhs in index:
+                if index[lhs] < index[rhs]:
+                    bad_reloads(f"Unexpected order, {lhs} before {rhs}")
 
 
 # =============================================================================

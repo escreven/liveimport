@@ -876,8 +876,8 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
     "Depends on" is a strict partial order LiveImport computes between tracked
     modules based on the top level import statements in those modules.  In most
     cases, those imports naturally define a strict partial order.  If they do
-    not (meaning there is an import cycle), LiveImport ignores the imports by
-    more recently tracked modules that prevent it.
+    not (meaning there is an import cycle), LiveImport ignores imports that
+    prevent it.
 
     :func:`sync()` guarantees that reload order is consistent with the "depends
     on" partial order, so if A depends on B, then B will reload before A.

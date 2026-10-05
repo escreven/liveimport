@@ -7,6 +7,7 @@
 #### Fixed
 - An exception raised while scanning a module for dependencies no longer
   terminates the dependency analysis process.
+- Restored reload report order and duplicate detection checking in tests.
 
 ## [1.3.0] - 2026-10-01
 
