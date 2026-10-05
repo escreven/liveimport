@@ -513,12 +513,11 @@ def reload_expect(*expected:str, depends_on:list[tuple[str,str]]|None=None):
         bad_reloads("Missing or extra report")
 
     if depends_on is not None:
-        index = { report: seqno for report, seqno
-                  in zip(reports,range(len(reports))) }
+        index = { report: i for i, report in enumerate(reports) }
         for lhs, rhs in depends_on:
             if lhs in index and rhs in index:
                 if index[lhs] < index[rhs]:
-                    bad_reloads(f"Unexpected order, {lhs} before {rhs}")
+                    bad_reloads(f"Bad order for dependency {lhs} -> {rhs}")
 
 
 # =============================================================================

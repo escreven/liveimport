@@ -893,8 +893,8 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
         an exception when executed during a reload.
 
     .. note::
-        Unless automatic syncing is disabled, calling :func:`sync()` in a
-        notebook should not be necessary.
+        Calling :func:`sync()` in a notebook should not be necessary.  See
+        :func:`auto_sync()`.
     """
     #
     # Determine if any modules have been updated, preparing to schedule
@@ -1080,10 +1080,9 @@ def workspace(*directories:str|PathLike) -> None:
     will be tracked.
 
     .. note::
-        Changing the workspace does not alter tracking decisions LiveImport has
-        already made.  It only affects future decisions.  If you want a
-        non-default workspace, it's best to change it before registering any
-        imports.
+        Changing the workspace does not alter LiveImport decisions to track a
+        module already made.  If you want a non-default workspace, it's best to
+        change it before registering any imports.
     """
     global _WORKSPACE
 
