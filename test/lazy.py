@@ -14,6 +14,13 @@ from liveimport._core import _sys_lazy_modules
 is_registered = is_registered_fn(globals())
 
 
+_DEPENDS_ON = [
+    ("su4a.b.y","su5a.b.y"),
+    ("su5a.b.y","su6a.b.y"),
+    ("su5a.b.y","su7a.b.y"),
+]
+
+
 #
 # Mock lazy import proxies (LazyImportType).  Only used when running without
 # real lazy imports.
@@ -346,7 +353,8 @@ def real_test_dependencies():
 
     reload_clear()
     liveimport.sync(observer=reload_observe)
-    reload_expect("su4a.b.y","su5a.b.y","su7a.b.y")
+    reload_expect("su4a.b.y","su5a.b.y","su7a.b.y",
+                  depends_on=_DEPENDS_ON)
 
     #
     # After a load and poll, su6a.b.y reloads when touched.
@@ -358,7 +366,8 @@ def real_test_dependencies():
     touch_module("su6a.b.y")
     reload_clear()
     liveimport.sync(observer=reload_observe)
-    reload_expect("su4a.b.y","su5a.b.y","su6a.b.y")
+    reload_expect("su4a.b.y","su5a.b.y","su6a.b.y",
+                  depends_on=_DEPENDS_ON)
 
 
 def mock_test_dependencies():

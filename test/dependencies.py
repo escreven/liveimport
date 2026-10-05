@@ -37,6 +37,28 @@ from liveimport import ModuleError
 # for which reload is expected in the order given.
 #
 
+_DIRECT_DEPENDS_ON = [
+    ("A","C"),
+    ("B","C"),
+    ("B","D"),
+    ("B","G"),
+    ("C","E"),
+    ("C","F"),
+    ("D","F"),
+    # ("E","A"), -- elided by cycle breaking rule
+]
+
+_INDIRECT_DEPENDS_ON = [
+    # ("A","C"), -- elided by cycle breaking rule
+    ("B","C"),
+    ("B","D"),
+    ("B","G"),
+    ("C","E"),
+    ("C","F"),
+    ("D","F"),
+    ("E","A"),
+]
+
 
 def _test(direct:bool, touch_list:list[str], expect_list:list[str]):
 
@@ -51,7 +73,8 @@ def _test(direct:bool, touch_list:list[str], expect_list:list[str]):
 
     reload_clear()
     liveimport.sync(observer=reload_observe)
-    reload_expect(*expect_list)
+    reload_expect(*expect_list, depends_on=(
+        _DIRECT_DEPENDS_ON if direct else _INDIRECT_DEPENDS_ON))
 
     for event in reload_list:
         name = event.module
@@ -109,10 +132,11 @@ def test_add_dependency():
 
     time.sleep(0.05)
     with revised_module("E",postscript="import G"):
+        depends_on = _DIRECT_DEPENDS_ON + [ ("E","G") ]
         touch_module("G")
         reload_clear()
         liveimport.sync(observer=reload_observe)
-        reload_expect("G","E","C","A","B") #type:ignore
+        reload_expect("G","E","C","A","B",depends_on=depends_on)
 
 
 def test_remove_dependency():
@@ -126,8 +150,9 @@ def test_remove_dependency():
         # No touch needed since we just wrote A.
         reload_clear()
         liveimport.sync(observer=reload_observe)
-        reload_expect("A","E","C","B") #type:ignore
-
+        reload_expect("A","E","C","B",depends_on=[
+            ("E","A"), ("C", "E"), ("B","C")
+        ])
 
 def test_analysis_error():
     """

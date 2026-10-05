@@ -79,7 +79,7 @@ def test_indirect_deleted():
 
     reload_clear()
     liveimport.sync(observer=reload_observe)
-    reload_expect("A","mod6")
+    reload_expect("A","mod6",depends_on=[("mod6","A")])
 
     expect_tag("mod6", next_tag(mod6_tag))
     expect_tag("A"   , next_tag(A_tag))
@@ -119,7 +119,10 @@ def test_thru_deleted():
 
     reload_clear()
     liveimport.sync(observer=reload_observe)
-    reload_expect("C","A","mod6")
+    reload_expect("C","A","mod6", depends_on=[
+        ("mod6","A"),
+        ("A","C"),
+    ])
 
     expect_tag("mod6", next_tag(mod6_tag))
     expect_tag("A"   , next_tag(A_tag))
