@@ -42,3 +42,10 @@ import B` in tracked module `M` adds `A.B` to `M`'s dependency list because
 `_NamespaceInfo.namespace` is the target for rebind actions when the associated
 import journal is applied.  When using LiveImport in a notebook, this is the
 notebook's `globals()`.  When using the API directly, it can be any dictionary.
+
+There is a difference between the internal notion of a tracked module (a module
+has a _ModuleInfo entry in _MODULE_TABLE) and a user's view.  A module is
+tracked from a user's perspective if and only if it has a _ModuleInfo entry in
+_MODULE_TABLE *and* the module is attached to a namespace.  The second
+condition means removing all registrations referencing a module prevents it
+from reloading.

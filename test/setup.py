@@ -13,20 +13,21 @@ import textwrap
 import time
 import tempfile
 from typing import Any
+from pathlib import Path
 import liveimport
 from liveimport import ReloadEvent
 from liveimport import _hash_state as hash_state
 from liveimport import _is_tracked as is_tracked
-from liveimport import _REIFY_WATCH
+from liveimport import _REIFY_WATCH, _WORKSPACE
 from liveimport import _is_lazy as is_lazy
 
 __all__ = [
     "modify_module", "restore_module", "revised_module",
-    "deleted_module",
-    "touch_module", "touch_file",
+    "deleted_module", "touch_module", "touch_file",
     "is_registered_fn", "is_tracked", "is_lazy", "hash_state",
     "get_tag", "next_tag", "expect_tag", "is_reify_watched",
     "reload_list", "reload_clear", "reload_observe", "reload_expect",
+    "workspace_snapshot","workspace_expect",
     "root", "keep_tempdir", "describe_environment",
     "REAL_LAZY_IMPORTS"
 ]
@@ -518,6 +519,23 @@ def reload_expect(*expected:str, depends_on:list[tuple[str,str]]|None=None):
             if lhs in index and rhs in index:
                 if index[lhs] < index[rhs]:
                     bad_reloads(f"Bad order for dependency {lhs} -> {rhs}")
+
+#
+# Verify the workspace elements are unique and the same as the given root()
+# relative directories.  workspace_snapshot() can be used with
+# workspace_expect() to verify the workspace is unchanged.
+#
+
+def workspace_snapshot() -> list[str]:
+    return [ str(path) for path in _WORKSPACE ]
+
+def workspace_expect(*dirs:str|os.PathLike):
+
+    workspace_set = set(_WORKSPACE)
+    assert len(workspace_set) == len(_WORKSPACE)
+
+    dir_set = set(Path(dir) for dir in dirs)
+    assert workspace_set == dir_set
 
 
 # =============================================================================
