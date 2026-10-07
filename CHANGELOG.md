@@ -1,5 +1,7 @@
 ## Unreleased
 
+## [1.3.1] - 2026-10-07
+
 #### Added
 - Optional argument `extend` of function `workspace()` which adds directories
   to the workspace instead of replacing the workspace.
