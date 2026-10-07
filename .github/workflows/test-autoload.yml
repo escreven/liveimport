@@ -31,7 +31,6 @@ jobs:
     - name: Prepare Pip Cache Key
       shell: bash
       run: |
-        # Make cache specific to oldest/latest and refresh it weekly.
         date -u +'%G-%V' > .pip-cache-key
         echo "${{ matrix.dependencies }}" >> .pip-cache-key
 
