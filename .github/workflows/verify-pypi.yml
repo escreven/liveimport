@@ -1,4 +1,4 @@
-name: Verify Deployment
+name: Verify PyPI
 
 #
 # There is a lag between uploading to [Test]PyPI and when the distribution
@@ -49,14 +49,100 @@ jobs:
         echo "Release tag exists"
       shell: bash
 
-  install_and_test:
+  canary:
+    name: Canary [ubuntu-latest, 3.12]
     needs: preamble
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dependencies: [ 'oldest', 'latest' ]
+      fail-fast: false
+
+    steps:
+    - name: Checkout LiveImport v${{ inputs.version }}
+      uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+        ref: refs/tags/v${{ inputs.version }}
+
+    - name: Prepare Pip Cache Key
+      shell: bash
+      run: |
+        date -u +'%G-%V' > .pip-cache-key
+        echo "${{ matrix.dependencies }}" >> .pip-cache-key
+
+    - name: Setup Python 3.12
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+        cache-dependency-path: |
+          .pip-cache-key
+
+    - name: Upgrade Pip, Wheel, and Setuptools
+      run: |
+        python -m pip install --upgrade pip wheel setuptools
+      shell: bash
+
+    - name: Install LiveImport and Check Version
+      run: |
+        if [[ "${{ inputs.repository }}" == "PyPI" ]]; then
+          python -m pip install --no-deps liveimport
+        else
+          python -m pip install --no-deps \
+            -i https://test.pypi.org/simple/ liveimport
+        fi
+        installed_version="$(python -c "import importlib.metadata; print(importlib.metadata.version('liveimport'))")"
+        echo "LiveImport installed from ${{ inputs.repository }}" \
+              "is version $installed_version"
+        if [[ ! $installed_version == "${{ inputs.version }}" ]]; then
+          echo "Expected ${{ inputs.version }}"
+          exit 1
+        fi
+      shell: bash
+
+    - name: Install Dependencies
+      run: |
+        if [[ "${{ matrix.dependencies }}" == "oldest" ]]; then
+          python -m pip install $OLDEST_DEPS
+        else
+          python -m pip install $LATEST_DEPS
+        fi
+      shell: bash
+
+    - name: Run Tests
+      run: |
+        python test/main.py -failstop
+      shell: bash
+
+    - name: Checkout Autoload Action
+      uses: actions/checkout@v5
+      with:
+        ref: ${{ github.sha }}
+        path: .autoload-action
+        sparse-checkout: .github/actions/check-autoload
+
+    - name: Check Autoload
+      uses: ./.autoload-action/.github/actions/check-autoload
+      with:
+        repository: ${{ inputs.repository }}
+
+  install_and_test:
+    name: Full
+    needs: canary
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ['3.10', '3.11', '3.12', '3.13', '3.14', '3.15']
         dependencies: [ 'oldest', 'latest' ]
-      fail-fast: true
+        exclude:
+          - os: ubuntu-latest
+            python-version: '3.12'
+            dependencies: 'oldest'
+          - os: ubuntu-latest
+            python-version: '3.12'
+            dependencies: 'latest'
+      fail-fast: false
 
     runs-on: ${{ matrix.os }}
 

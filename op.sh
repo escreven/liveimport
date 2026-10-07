@@ -134,9 +134,6 @@ function require_releasable_source {
 # Succeed iff the given version and no other is built, and twine check
 # succeeds for that build.
 #
-# NOTE: There is currently a bug in twine or setuptools that causes this to
-# spuriously fail on Mac with an error message related to license_file.
-#
 
 function require_good_build {
     local version=$1
