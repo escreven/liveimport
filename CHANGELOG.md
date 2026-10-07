@@ -1,13 +1,21 @@
 ## Unreleased
 
+#### Added
+- Optional argument `extend` of function `workspace()` which adds directories
+  to the workspace instead of replacing the workspace.
+- Option `-exclude` to `test/main.py` to avoid running tests with names
+  matching the given pattern.
+
 #### Changed
 - Folded _workspace.py into _core.py.
-- Added `-exclude` option to `test/main.py`.
 
 #### Fixed
 - An exception raised while scanning a module for dependencies no longer
   terminates the dependency analysis process.
 - Restored reload report order and duplicate detection checking in tests.
+- New `workspace()` definitions immediately affect existing tracked modules.
+  Previously, once a module was determined to be part of the workspace, it was
+  regarded as being in the workspace regardless of workspace changes.
 
 ## [1.3.0] - 2026-10-01
 

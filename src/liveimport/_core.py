@@ -146,7 +146,10 @@ _REIFY_WATCH:set[str] = set()
 
 _WORKSPACE:list[Path] = [ _absolute(".") ]
 
-def _in_workspace(file:str) -> bool:
+def _in_workspace(file:str|None) -> bool:
+
+    if file is None:
+        return False
 
     filepath = _absolute(file)
 
@@ -614,8 +617,7 @@ def _track_new_indirects() -> None:
                 if modulename in _MODULE_TABLE: continue
                 if (module := sys.modules.get(modulename)) is None: continue
                 _, file = _locate(module)
-                if file is None: continue
-                if not _in_workspace(file): continue
+                if not _in_workspace(file): continue # Handles file is None
                 #
                 # Start tracking the dependee.
                 #
@@ -909,12 +911,15 @@ def sync(*, observer:Callable[[ReloadEvent],None]|None=None) -> None:
     for info in _MODULE_TABLE.values():
         info.mark = 0
         current_mtime = _mtime_if_exists(info.file)
-        if current_mtime is None:
+        if (current_mtime is None or
+            not info.attachedto and not _in_workspace(info.file)):
             #
-            # The module source file is missing.  Pre-mark the module as "Visit
-            # complete; will not reload".  (See below).  That prevents the
-            # topological sort from visiting the module, and ensures the module
-            # will not be added to the reload schedule.
+            # The module source file is missing or it is not directly
+            # referenced by a registered import statement and is not in the
+            # workspace.  Pre-mark the module as "Visit complete; will not
+            # reload".  (See below).  That prevents the topological sort from
+            # visiting the module, and ensures the module will not be added to
+            # the reload schedule.
             #
             info.mark = 2
         elif current_mtime != info.mtime:
@@ -1042,9 +1047,9 @@ def poll_lazy_imports():
         _track_new_indirects()
 
 
-def workspace(*directories:str|PathLike) -> None:
+def workspace(*directories:str|PathLike, extend:bool=False) -> None:
     """
-    Define the workspace, a set of directories.
+    Define or extend the workspace, a set of directories.
 
     LiveImport tracks modules that either are imported by a registered import
     statement, or are imported by a tracked module and have a source file in
@@ -1055,11 +1060,23 @@ def workspace(*directories:str|PathLike) -> None:
     module is imported.  Thus in normal use, when LiveImport is used in a
     notebook, the workspace is the directory containing the notebook.
 
+    Workspace changes take effect immediately.  LiveImport stops tracking
+    modules that are not referenced by registered import statements and are no
+    longer in the workspace, and begins tracking modules now in the workspace
+    that are imported by a tracked module.
+
     :param directories: Zero or more path strings or path-like objects.  Each
         path must identify an existing directory.
 
+    :param extend: By default, :func:`workspace()` replaces the current
+        workspace with the directories given.  When `extend` is true,
+        :func:`workspace()` adds those directories instead.
+
     :raises ValueError: One of the specified paths does not exist or
         exists but is not a directory.
+
+    :raises ModuleError: The content of a module now tracked because of the new
+        workspace definition is erroneous.
 
     Example: After calling
 
@@ -1078,15 +1095,15 @@ def workspace(*directories:str|PathLike) -> None:
 
     the workspace is empty, so only modules referenced by registered imports
     will be tracked.
-
-    .. note::
-        Changing the workspace does not alter LiveImport decisions to track a
-        module already made.  If you want a non-default workspace, it's best to
-        change it before registering any imports.
     """
     global _WORKSPACE
 
-    workspace:list[Path] = []
+    #
+    # _WORKSPACE is imported by other modules for testing and debugging, so we
+    # must replace its contents, not assign to _WORKSPACE.
+    #
+
+    givenpaths:list[Path] = []
 
     for dir in directories:
 
@@ -1098,9 +1115,14 @@ def workspace(*directories:str|PathLike) -> None:
         if not path.is_dir():
             raise ValueError(f"Path {path} is not a directory")
 
-        workspace.append(path)
+        givenpaths.append(path)
 
-    _WORKSPACE[:] = workspace
+    workspace = set(givenpaths)
+
+    if extend:
+        workspace.update(_WORKSPACE)
+
+    _WORKSPACE[:] = list(workspace)
 
     _track_new_indirects()
 

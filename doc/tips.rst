@@ -33,7 +33,7 @@ To turn autoloading off, uninstall the package:
 
     $ pip uninstall liveimport-autoload
 
-To disable autoloadng for a kernel without uninstalling, set
+To disable autoloading for a kernel without uninstalling, set
 ``LIVEIMPORT_NO_AUTOLOAD=1`` in the kernel's environment before it starts.
 
 
