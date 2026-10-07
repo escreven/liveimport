@@ -13,6 +13,9 @@
 # We use the same canary strategy as test.yml -- no need to test the full
 # matrix if tests on Linux with Python 3.12 fail.
 #
+# We also use the same setup-python pip cache keys as test.yml -- rotated
+# weekly and always for "latest".
+#
 
 name: Dependency Watch
 
@@ -102,13 +105,8 @@ jobs:
       - name: Prepare Pip Cache Key
         shell: bash
         run: |
-          # Refresh unpinned dependencies weekly while reusing previous downloads.
           date -u +'%G-%V' > .pip-cache-key
-          printf '%s\n' \
-            "ipython==${{ needs.detect.outputs.ipython_version }}" \
-            "notebook==${{ needs.detect.outputs.notebook_version }}" \
-            "liveimport==${{ needs.detect.outputs.liveimport_version }}" \
-            >> .pip-cache-key
+          echo "latest" >> .pip-cache-key
 
       - name: Setup Python 3.12
         uses: actions/setup-python@v6
@@ -117,8 +115,6 @@ jobs:
           cache: 'pip'
           cache-dependency-path: |
             .pip-cache-key
-            .github/workflows/watch.yml
-            pyproject.toml
 
       - name: Install Dependencies (latest IPython/Notebook)
         shell: bash
@@ -173,13 +169,8 @@ jobs:
       - name: Prepare Pip Cache Key
         shell: bash
         run: |
-          # Refresh unpinned dependencies weekly while reusing previous downloads.
           date -u +'%G-%V' > .pip-cache-key
-          printf '%s\n' \
-            "ipython==${{ needs.detect.outputs.ipython_version }}" \
-            "notebook==${{ needs.detect.outputs.notebook_version }}" \
-            "liveimport==${{ needs.detect.outputs.liveimport_version }}" \
-            >> .pip-cache-key
+          echo "latest" >> .pip-cache-key
 
       - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
@@ -189,8 +180,6 @@ jobs:
           cache: 'pip'
           cache-dependency-path: |
             .pip-cache-key
-            .github/workflows/watch.yml
-            pyproject.toml
 
       - name: Install Dependencies (latest IPython/Notebook)
         shell: bash

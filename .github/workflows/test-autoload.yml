@@ -31,8 +31,9 @@ jobs:
     - name: Prepare Pip Cache Key
       shell: bash
       run: |
-        # Refresh unpinned dependencies weekly while reusing previous downloads.
+        # Make cache specific to oldest/latest and refresh it weekly.
         date -u +'%G-%V' > .pip-cache-key
+        echo "${{ matrix.dependencies }}" >> .pip-cache-key
 
     - name: Setup Python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
@@ -42,9 +43,6 @@ jobs:
         cache: 'pip'
         cache-dependency-path: |
           .pip-cache-key
-          .github/workflows/test-autoload.yml
-          pyproject.toml
-          autoload/pyproject.toml
 
     - name: Run Autoload Tests
       run: |
