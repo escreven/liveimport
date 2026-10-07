@@ -67,12 +67,22 @@ jobs:
         fetch-depth: 0
         ref: refs/tags/v${{ inputs.version }}
 
+    - name: Prepare Pip Cache Key
+      shell: bash
+      run: |
+        # Refresh unpinned dependencies weekly while reusing previous downloads.
+        date -u +'%G-%V' > .pip-cache-key
+
     - name: Setup Python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
         cache: 'pip'
+        cache-dependency-path: |
+          .pip-cache-key
+          .github/workflows/verify-pypi.yml
+          pyproject.toml
 
     - name: Upgrade Pip, Wheel, and Setuptools
       run: |

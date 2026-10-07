@@ -28,12 +28,23 @@ jobs:
     - name: Checkout LiveImport
       uses: actions/checkout@v5
 
+    - name: Prepare Pip Cache Key
+      shell: bash
+      run: |
+        # Refresh unpinned dependencies weekly while reusing previous downloads.
+        date -u +'%G-%V' > .pip-cache-key
+
     - name: Setup Python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
         cache: 'pip'
+        cache-dependency-path: |
+          .pip-cache-key
+          .github/workflows/test-autoload.yml
+          pyproject.toml
+          autoload/pyproject.toml
 
     - name: Run Autoload Tests
       run: |
@@ -105,7 +116,6 @@ jobs:
         unset PYTHONPATH PYTHONHOME LIVEIMPORT_NO_AUTOLOAD
 
         export IPYTHONDIR="$tempdir/ipython"
-        export PIP_CACHE_DIR="$tempdir/pip-cache"
         export PYTHONNOUSERSITE=1
 
         mkdir -p "$tempdir/source/autoload" "$IPYTHONDIR" \
