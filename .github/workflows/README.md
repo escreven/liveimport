@@ -22,11 +22,12 @@ Every workflow except Dependency Watch runs tests over the following matrix:
 
 The `oldest` dependency presently means pip should install `ipython==7.23.1`
 and `notebook==5.7.0`.  The `latest` dependency means pip should install the
-latest versions of `ipython` and `notebook`.
+latest versions of `ipython` and `notebook` available for the Python version
+running the test.
 
 Since the goal of Dependency Watch is to catch issues with just released
 versions of `notebook` or `ipython`, it only tests dependency `latest`.
-Furthermore, because the latest versions of `ipython` require Python >=3.12,
+Furthermore, because the newest versions of `ipython` require Python >=3.12,
 Dependency Watch tests Python versions 3.12 through 3.15.
 
 Integration Test, Verify PyPI, and Dependency Watch all run the LiveImport
@@ -88,10 +89,10 @@ the test suite.
 
 The goal of Dependency Watch is to quickly detect new releases of `ipython` or
 `notebook` that break LiveImport.  It runs every twelve hours, polling PyPI for
-the lastest `ipython` and `notebook` version numbers.  If those numbers don't
-match versions Dependency Watch knows to have been tested, the workflow runs
-the test suite across all platforms and Python versions in the matrix using the
-last released version of LiveImport.
+the most recent `ipython` and `notebook` version numbers.  If those numbers
+don't match versions Dependency Watch knows to have been tested, the workflow
+runs the test suite across all platforms and Python versions in the matrix
+using the last released version of LiveImport.
 
 If there is a failure during a scheduled run, Dependency Watch creates a GitHub
 issue.
