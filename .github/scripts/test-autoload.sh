@@ -1,0 +1,180 @@
+#!/bin/bash
+
+# Run from the repository root with the Python selected by setup-python.
+# AUTOLOAD_DEPENDENCIES selects oldest or latest dependencies.
+
+set -euo pipefail
+
+#
+# Report fatal error to stderr and exit.
+#
+
+function fail {
+    echo "FAILED: $@" >&2
+    exit 1
+}
+
+#
+# Direct execution must succeed without writing to either output
+# stream.  Use a file so that even output consisting only of newlines
+# is detected.
+#
+
+function require_silent_startup {
+    local stage=$1
+    python "$startup" > "$tempdir/startup.log" 2>&1 \
+        || fail "Startup file failed $stage; output: $(cat "$tempdir/startup.log")"
+    [[ ! -s $tempdir/startup.log ]] \
+        || fail "Startup file produced output $stage: $(cat "$tempdir/startup.log")"
+}
+
+#
+# Feed the probe to an interactive IPython session.  IPython catches
+# SystemExit, so use os._exit to propagate a failed probe to the shell.
+# Require a marker as well, in case IPython exits without running the
+# probe.
+#
+
+function require_autoload {
+    local expected=$1
+    local stage=$2
+    python -m IPython --simple-prompt --no-confirm-exit \
+            > "$tempdir/ipython.log" 2>&1 <<EOF \
+        || fail "IPython failed $stage; output: $(cat "$tempdir/ipython.log")"
+import sys, os
+loaded = 'liveimport' in sys.modules
+print('liveimport present:', loaded)
+print('AUTOLOAD-PROBE-PASSED' if loaded == $expected else 'AUTOLOAD-PROBE-FAILED', flush=True)
+os._exit(0 if loaded == $expected else 1)
+EOF
+    grep -q 'AUTOLOAD-PROBE-PASSED' "$tempdir/ipython.log" \
+        || fail "IPython did not complete the probe $stage; output: $(cat "$tempdir/ipython.log")"
+}
+
+#
+# Prepare.
+#
+
+repo=$PWD
+
+tempdir=$(python -c 'import tempfile; from pathlib import Path; print(Path(tempfile.mkdtemp(prefix="liveimport-autoload.")).as_posix())') \
+    || fail "Could not create temporary directory"
+
+trap 'fail "Interrupted"' HUP INT TERM
+
+#
+# Keep user configuration and source-tree imports out of the test.
+# Build local copies because pip can write build and egg-info
+# directories.
+#
+
+unset PYTHONPATH PYTHONHOME LIVEIMPORT_NO_AUTOLOAD
+
+export IPYTHONDIR="$tempdir/ipython"
+export PYTHONNOUSERSITE=1
+
+mkdir -p "$tempdir/source/autoload" "$IPYTHONDIR" \
+    || fail "Could not create temporary source and configuration directories"
+
+cp "$repo/pyproject.toml" "$repo/README.md" "$tempdir/source/" \
+    || fail "Could not copy LiveImport package metadata"
+
+cp -R "$repo/src" "$tempdir/source/" \
+    || fail "Could not copy LiveImport source"
+
+cp "$repo/autoload/pyproject.toml" "$repo/autoload/README.md" \
+        "$tempdir/source/autoload/" \
+    || fail "Could not copy autoload package metadata"
+
+cp -R "$repo/autoload/startup" "$tempdir/source/autoload/" \
+    || fail "Could not copy autoload startup file"
+
+cd "$tempdir" || fail "Could not enter temporary directory"
+
+#
+# Use the Python selected by setup-python.  Verify that the packages
+# whose installation we test are not already importable.
+#
+
+for package in IPython liveimport; do
+    python -c 'import importlib.util, sys; sys.exit(importlib.util.find_spec(sys.argv[1]) is not None)' "$package" \
+        || fail "$package must be absent before testing installation"
+done
+
+startup=$(python -c 'import sysconfig; from pathlib import Path; print((Path(sysconfig.get_path("data")) / "etc/ipython/startup/00-liveimport.py").as_posix())') \
+    || fail "Could not determine autoload startup file path"
+
+#
+# Install liveimport-autoload.  This should copy 00-liveimport.py to
+# etc/ipython/startup/.
+#
+
+python -m pip install "$tempdir/source/autoload" \
+    || fail "Could not install liveimport-autoload"
+
+[[ -f $startup ]] \
+    || fail "Autoload startup file was not installed at $startup"
+
+#
+# Executing the startup file when IPython and LiveImport are not
+# installed should be a no-op.
+#
+
+require_silent_startup "before installing IPython"
+
+#
+# Now install IPython.  Executing the startup file directly should
+# still be a no-op since there is no IPython shell, and running an
+# IPython kernel should do nothing since LiveImport isn't installed.
+#
+
+if [ "${AUTOLOAD_DEPENDENCIES}" = "oldest" ]; then
+    python -m pip install $OLDEST_DEPS \
+        || fail "Could not install oldest IPython dependency"
+else
+    python -m pip install $LATEST_DEPS \
+        || fail "Could not install latest IPython dependency"
+fi
+
+require_silent_startup "after installing IPython"
+require_autoload False "before installing LiveImport"
+
+#
+# Install LiveImport.  Running IPython should now automatically load
+# LiveImport.
+#
+
+python -m pip install "$tempdir/source" \
+    || fail "Could not install LiveImport"
+
+require_autoload True "after installing LiveImport"
+
+#
+# Automatically loading LiveImport should be suppressed when
+# LIVEIMPORT_NO_AUTOLOAD is present in the environment, unless its
+# value is either 0 or false (by case-insensitive comparison.)
+#
+
+LIVEIMPORT_NO_AUTOLOAD=1 \
+    require_autoload False "with LIVEIMPORT_NO_AUTOLOAD=1"
+
+LIVEIMPORT_NO_AUTOLOAD= \
+    require_autoload False "with LIVEIMPORT_NO_AUTOLOAD empty"
+
+LIVEIMPORT_NO_AUTOLOAD=0 \
+    require_autoload True "with LIVEIMPORT_NO_AUTOLOAD=0"
+
+LIVEIMPORT_NO_AUTOLOAD=FaLsE \
+    require_autoload True "with LIVEIMPORT_NO_AUTOLOAD=FaLsE"
+
+#
+# Uninstall liveimport-autoload.  Running IPython should no longer
+# automatically load LiveImport.
+#
+
+python -m pip uninstall -y liveimport-autoload \
+    || fail "Could not uninstall liveimport-autoload"
+
+require_autoload False "after uninstalling liveimport-autoload"
+
+echo "Done."

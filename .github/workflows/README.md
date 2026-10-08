@@ -48,6 +48,11 @@ resources.  This is especially helpful for Verify PyPI since there is a lag
 between when a release is uploaded to PyPI and it becomes available to install
 in a GitHub runner.
 
+> We avoid duplicating test steps between the canary and full matrix jobs
+> by using a YAML `&test-steps` anchor.  That's why the canary specifications
+> use a Python version matrix dimension with the single value 3.12 &mdash; that
+> makes the anchored steps usable for full matrix.
+
 ### `setup-python` Cache Key
 
 In addition to the OS, processor, and Python version elements always present in
@@ -96,6 +101,10 @@ using the last released version of LiveImport.
 
 If there is a failure during a scheduled run, Dependency Watch creates a GitHub
 issue.
+
+> Polling is require because there is no way to trigger a workflow when a
+> python package is released.  We use using the action cache as a lightweight
+> persistent store to keep track of what dependency versions are tested.
 
 ### Autoload Test
 
