@@ -3,6 +3,9 @@
 #
 # test-autoload.sh - Test LiveImport autoload installation and removal.
 #
+# This script is both used from the command line and and invoked by the
+# test-autoload.yml workflow.
+#
 
 set -euo pipefail
 
@@ -51,7 +54,7 @@ function require_silent_startup {
 function require_autoload {
     local expected=$1
     local stage=$2
-    "$venv/bin/ipython" --simple-prompt --no-confirm-exit \
+    "$PYTHON" -m IPython --simple-prompt --no-confirm-exit \
             > "$tempdir/ipython.log" 2>&1 <<EOF \
         || fail "IPython failed $stage; output: $(cat "$tempdir/ipython.log")"
 import sys, os
@@ -68,26 +71,61 @@ EOF
 # ================================ MAIN ======================================
 #
 
-[[ $# == 1 || $# == 2 ]] \
-    || fail "Usage: $0 PYTHON_VERSION [IPYTHON_VERSION] (Example: 3.14 9.17.1)"
+# --no_venv requires an environment without IPython or LiveImport and leaves
+# both installed after testing.  --venv requires python3.<n> on PATH.
 
-[[ $1 =~ ^[0-9]+\.[0-9]+$ ]] \
-    || fail "Python version must have the form MAJOR.MINOR"
-
-version=$1
+mode=
+version=
 ipython_package=IPython
-if [[ $# == 2 ]]; then
-    [[ -n $2 ]] || fail "IPython version must not be empty"
-    ipython_package="IPython==$2"
+ipython_version=
+
+for argument in "$@"; do
+    case "$argument" in
+        --venv=*)
+            [[ -z $mode ]] || fail "Specify exactly one of --venv and --no_venv"
+            mode=venv
+            version=${argument#--venv=}
+            [[ $version =~ ^3\.[0-9]+$ ]] \
+                || fail "Python version must have the form 3.<n> (Example: 3.15)"
+            ;;
+        --no_venv)
+            [[ -z $mode ]] || fail "Specify exactly one of --venv and --no_venv"
+            mode=no_venv
+            ;;
+        --ipython=*)
+            [[ -z $ipython_version ]] || fail "Specify --ipython only once"
+            ipython_version=${argument#--ipython=}
+            [[ -n $ipython_version ]] || fail "IPython version must not be empty"
+            [[ $ipython_version =~ ^[0-9][a-zA-Z0-9.+!]*$ ]] \
+                || fail "IPython version must be a specific version"
+            ipython_package="IPython==$ipython_version"
+            ;;
+        *)
+            fail "Unknown argument: $argument"
+            ;;
+    esac
+done
+
+[[ -n $mode ]] \
+    || fail "Usage: $0 (--venv=3.<n> | --no_venv) [--ipython=VERSION]"
+
+if [[ $mode == venv ]]; then
+    PYTHON="python$version"
+else
+    PYTHON=python
 fi
 
-command -v "python$version" > /dev/null \
-    || fail "Could not find python$version on PATH"
+command -v "$PYTHON" > /dev/null \
+    || fail "Could not find $PYTHON on PATH"
+
+# Resolve the interpreter before changing directories.
+PYTHON=$("$PYTHON" -c 'import sys; from pathlib import Path; print(Path(sys.executable).as_posix())') \
+    || fail "Could not determine Python executable path"
 
 cd "$(dirname "$BASH_SOURCE")/.." || fail "Could not find repository root"
 repo=$PWD
 
-tempdir=$(mktemp -d "${TMPDIR:-/tmp}/liveimport-autoload.XXXXXXXX") \
+tempdir=$("$PYTHON" -c 'import tempfile; from pathlib import Path; print(Path(tempfile.mkdtemp(prefix="liveimport-autoload.")).as_posix())') \
     || fail "Could not create temporary directory"
 
 trap cleanup EXIT
@@ -101,7 +139,6 @@ trap 'fail "Interrupted"' HUP INT TERM
 unset PYTHONPATH PYTHONHOME LIVEIMPORT_NO_AUTOLOAD
 
 export IPYTHONDIR="$tempdir/ipython"
-export PIP_CACHE_DIR="$tempdir/pip-cache"
 export PYTHONNOUSERSITE=1
 
 mkdir -p "$tempdir/source/autoload" "$IPYTHONDIR" \
@@ -123,14 +160,36 @@ cp -R "$repo/autoload/startup" "$tempdir/source/autoload/" \
 cd "$tempdir" || fail "Could not enter temporary directory"
 
 #
-# Create a virtual environment for the specified Python version.
+# Create a virtual environment for the specified Python version, or use
+# the current environment selected by setup-python.
 #
 
-venv="$tempdir/venv"
-"python$version" -m venv "$venv" \
-    || fail "Could not create Python $version virtual environment"
-PYTHON="$venv/bin/python"
-startup="$venv/etc/ipython/startup/00-liveimport.py"
+if [[ $mode == venv ]]; then
+    venv="$tempdir/venv"
+    "$PYTHON" -m venv "$venv" \
+        || fail "Could not create Python $version virtual environment"
+    if [[ -f $venv/Scripts/python.exe ]]; then
+        PYTHON="$venv/Scripts/python.exe"
+    else
+        PYTHON="$venv/bin/python"
+    fi
+fi
+
+#
+# Ensure IPython and LiveImport are not installed in the Python environment.
+#
+
+for package in IPython liveimport; do
+    "$PYTHON" -c 'import importlib.util, sys; sys.exit(importlib.util.find_spec(sys.argv[1]) is not None)' "$package" \
+        || fail "$package must be absent before testing installation"
+done
+
+#
+# Get the startup file path.
+#
+
+startup=$("$PYTHON" -c 'import sysconfig; from pathlib import Path; print((Path(sysconfig.get_path("data")) / "etc/ipython/startup/00-liveimport.py").as_posix())') \
+    || fail "Could not determine autoload startup file path"
 
 #
 # Install liveimport-autoload.  This should copy 00-liveimport.py to
@@ -152,7 +211,7 @@ require_silent_startup "before installing IPython"
 #
 # Now install IPython.  Executing the startup file directly should still be a
 # no-op since there is no IPython shell, and running an IPython kernel should
-# so nothing since LiveImport isn't installed.
+# do nothing since LiveImport isn't installed.
 #
 
 "$PYTHON" -m pip install --upgrade "$ipython_package" \
@@ -190,7 +249,7 @@ LIVEIMPORT_NO_AUTOLOAD=FaLsE \
     require_autoload True "with LIVEIMPORT_NO_AUTOLOAD=FaLsE"
 
 #
-# Uninstall liveimport-autoload.  Running IPython should not longer
+# Uninstall liveimport-autoload.  Running IPython should no longer
 # automatically load LiveImport.
 #
 

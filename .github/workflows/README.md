@@ -102,7 +102,7 @@ using the last released version of LiveImport.
 If there is a failure during a scheduled run, Dependency Watch creates a GitHub
 issue.
 
-> Polling is require because there is no way to trigger a workflow when a
+> Polling is required because there is no way to trigger a workflow when a
 > python package is released.  We use using the action cache as a lightweight
 > persistent store to keep track of what dependency versions are tested.
 
