@@ -319,7 +319,7 @@ class _ImportRecord(ABC):
 
     @abstractmethod
     def validate(self, namespace:dict[str,Any]) -> None:
-        pass # pragma: no cover
+        ...
 
     #
     # Return an import statement equivalent to the import record.
@@ -327,7 +327,7 @@ class _ImportRecord(ABC):
 
     @abstractmethod
     def statement(self) -> str:
-        pass # pragma: no cover
+        ...
 
     #
     # Carry out namespace binding actions of the equivalent import record.
@@ -335,7 +335,7 @@ class _ImportRecord(ABC):
 
     @abstractmethod
     def rebind(self, namespace:dict[str,Any]) -> None:
-        pass # pragma: no cover
+        ...
 
     #
     # Return true iff the import actions implied by modulename, name, and
@@ -346,7 +346,7 @@ class _ImportRecord(ABC):
 
     @abstractmethod
     def covers(self, modulename:str, name:str|None, asname:str|None) -> bool:
-        pass # pragma: no cover
+        ...
 
     def __repr__(self):
         return ("Record<" + self.statement() + ">")
