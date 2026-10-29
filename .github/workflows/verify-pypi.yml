@@ -115,7 +115,7 @@ jobs:
       with:
         repository: ${{ inputs.repository }}
 
-  install_and_test:
+  full:
     name: Full
     needs: canary
     strategy:

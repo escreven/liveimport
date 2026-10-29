@@ -29,7 +29,7 @@ _DEPENDS_ON = [
 class _MockLazyImportType(ABC):
     @abstractmethod
     def resolve(self) -> Any:
-        pass
+        ...
 
 class _MockLazyImportNameType(_MockLazyImportType):
     __slots__ = "modulename", "namespace", "topname"

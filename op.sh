@@ -15,7 +15,7 @@ else
 fi
 
 #
-# The name of the LiveImport public remote.
+# The name of the public remote.
 #
 
 PUBLIC=public
@@ -195,8 +195,7 @@ function require_git_clean {
 }
 
 #
-# Require the top-level README.md to be in a deployable state.  For now that
-# just means it contains no relative links.
+# Require the top-level README.md to be in a deployable state.
 #
 
 function require_deployable_README {
@@ -253,7 +252,7 @@ function clean_coverage {
 
 function build_doc {
     make -C doc html
-    echo "Documentation root is $(pwd)/doc/_build/html/index.html"
+    echo "Documentation root is file://$(pwd)/doc/_build/html/index.html"
 }
 
 #
@@ -367,6 +366,88 @@ upload_dist() {
 }
 
 #
+# Download and test a deployed distribution in a virtual environment.
+#
+
+check_deployment() {
+
+    local name=$1
+    local repo=$2
+
+    [[ -d venv ]] || \
+        fail "Repository checks require a top-level venv/ directory".
+
+    local_version=$(require_consistent_version)
+
+    local repo_version
+    echo
+    echo ">>>> About to install and check a ${name} release."
+    read -p ">>>> Enter release version number to check: " repo_version
+    echo
+
+    if [[ $local_version != $repo_version ]]; then
+        local check_anyway
+        echo ">>>> Release version ${repo_version} does not match" \
+            "local version $local_version."
+        read -p ">>>> Type Mismatch to continue: " check_anyway
+        if [[ $check_anyway != Mismatch ]]; then
+            fail "Aborting check."
+        fi
+    fi
+
+    local dir="venv/$repo"
+
+    if [[ -d $dir ]]; then
+        echo "Removing virtual environment $dir."
+        rm -rf $dir || fail "Could not remove $dir"
+    fi
+
+    echo
+    echo "Running $PYTHON -m venv $dir"
+    $PYTHON -m venv "$dir"
+
+    local withenv="source ${dir}/bin/activate"
+
+    echo "Installing dependencies."
+
+    $withenv && python -m pip install --upgrade pip \
+             && python -m pip install ipython notebook coverage ||
+        fail "Could not install dependencies."
+
+    echo "Installing liveimport ${repo_version} from ${name}."
+
+    if [[ $repo == pypi ]]; then
+        $withenv && python -m pip install --no-deps \
+            "liveimport==${repo_version}" || \
+                fail "Could not install liveimport ${repo_version} from PyPI"
+    else
+        $withenv && python -m pip install --no-deps \
+            -i https://test.pypi.org/simple/ "liveimport==${repo_version}" || \
+                fail "Could not install liveimport ${repo_version} from TestPyPI"
+    fi
+
+    $withenv && python test/main.py || fail \
+        "Testing failed."
+
+    local python_version=$($withenv && python --version)
+    echo
+    echo "$python_version tests for liveimport ${repo_version} succeeded."
+    echo
+}
+
+#
+# Remove all virtual environments.
+#
+
+clean_venv() {
+    if [[ -d venv ]]; then
+        rm -rf venv/*
+    else
+        echo "Directory venv/ does not exist."
+    fi
+}
+
+#
 # Print usage and exit.
 #
 
@@ -385,13 +466,16 @@ usage() {
     echo "    check-clean-main    Verify local repo is on clean main branch"
     echo "    check-source        Verify source code is releasable"
     echo "    check-README        Verify README.md is deployable"
+    echo "    check-pypi          Verify PyPI deployment"
+    echo "    check-testpypi      Verify TestPyPI deployment"
     echo "    declare-release     Tag current clean main branch as a release"
     echo "    deploy-to-testpypi  Upload distribution files to TestPyPI"
     echo "    deploy-to-pypi      Upload distribution files to PyPI"
     echo "    clean-coverage      Delete coverage data and reports"
     echo "    clean-doc           Delete documentation"
     echo "    clean-dist          Delete distribution files"
-    echo "    clean               Delete coverage, doc, and distribution files"
+    echo "    clean-venv          Delete virtual environments"
+    echo "    clean               Delete doc, dist, and venv files"
     echo
     echo "The deployment actions require user confirmation."
     echo
@@ -465,6 +549,12 @@ function act {
         deploy-to-pypi)
             upload_dist PyPI pypi
             ;;
+        check-pypi)
+            check_deployment PyPI pypi
+            ;;
+        check-testpypi)
+            check_deployment TestPyPI testpypi
+            ;;
         clean-coverage)
             clean_coverage
             ;;
@@ -474,10 +564,14 @@ function act {
         clean-dist)
             rm -rf dist/*
             ;;
+        clean-venv)
+            clean_venv
+            ;;
         clean)
             act clean-coverage
             act clean-doc
             act clean-dist
+            act clean-venv
             ;;
         *)
             usage
