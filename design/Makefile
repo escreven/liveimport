@@ -1,7 +1,8 @@
-DOT      = dot
-DIAGRAMS = model-diagram
+DOT       = dot
+DIAGRAMS  = model-diagram
+PYTHON   := $(if $(findstring CYGWIN,$(UNAME)),py,python3)
 
 all: $(DIAGRAMS:%=%.svg)
 
-%.svg: %.gv
-	${DOT} $< -Tsvg -o $@
+%.svg: %.py
+	${PYTHON} $<
