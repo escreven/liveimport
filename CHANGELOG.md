@@ -1,5 +1,8 @@
 ## Unreleased
 
+#### Added
+- Release candidate support in `op.sh` and `verify-pypi.yml`.
+
 ## [1.3.1] - 2026-10-07
 
 #### Added

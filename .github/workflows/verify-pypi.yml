@@ -84,10 +84,15 @@ jobs:
 
     - name: Install LiveImport and Check Version
       run: |
-        if [[ "${{ inputs.repository }}" == "PyPI" ]]; then
-          python -m pip install --no-deps liveimport
+        if [[ "${{ inputs.version }}" =~ rc[0-9]+$ ]]; then
+          all_releases="--all-releases=liveimport"
         else
-          python -m pip install --no-deps \
+          all_releases=""
+        fi
+        if [[ "${{ inputs.repository }}" == "PyPI" ]]; then
+          python -m pip install --no-deps $all_releases liveimport
+        else
+          python -m pip install --no-deps $all_releases \
             -i https://test.pypi.org/simple/ liveimport
         fi
         installed_version="$(python -c "import importlib.metadata; print(importlib.metadata.version('liveimport'))")"

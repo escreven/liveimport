@@ -90,7 +90,7 @@ function require_consistent_version {
 function require_not_released {
     local version=$1
     fetch_all
-    if git tag -l | grep -q "v${version}"; then
+    if git show-ref --verify --quiet "refs/tags/v${version}"; then
         fail "Source version $version already released"
     fi
 }
@@ -102,18 +102,20 @@ function require_not_released {
 function require_released {
     local version=$1
     fetch_all
-    git tag -l | grep -q "v${version}" \
+    git show-ref --verify --quiet "refs/tags/v${version}" \
         || fail "Source version $version not released"
 }
 
 #
-# Succeed iff the given version has a <major>.<minor>.<patch> form.
+# Succeed iff the given version has a <major>.<minor>.<patch> form,
+# optionally followed by rc<number>.
 #
 
 function require_releasable_version {
     local version=$1
-    [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] \
-        || fail "Release versions must be <major>.<minor>.<patch>;" \
+    [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+(rc[0-9]+)?$ ]] \
+        || fail "Release versions must be <major>.<minor>.<patch> " \
+                "optionally followed by rc<number>;" \
                 "have version $version"
 }
 
