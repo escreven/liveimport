@@ -420,10 +420,12 @@ check_deployment() {
 
     if [[ $repo == pypi ]]; then
         $withenv && python -m pip install --no-deps \
+            --no-cache-dir --refresh-package liveimport \
             "liveimport==${repo_version}" || \
                 fail "Could not install liveimport ${repo_version} from PyPI"
     else
         $withenv && python -m pip install --no-deps \
+            --no-cache-dir --refresh-package liveimport \
             -i https://test.pypi.org/simple/ "liveimport==${repo_version}" || \
                 fail "Could not install liveimport ${repo_version} from TestPyPI"
     fi
